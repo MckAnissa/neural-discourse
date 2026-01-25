@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neural Discourse // AI Conversation Framework</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <canvas id="matrix-bg"></canvas>
+
+    <!-- Decorative corner elements -->
+    <div class="cyber-corner tl"></div>
+    <div class="cyber-corner tr"></div>
+    <div class="cyber-corner bl"></div>
+    <div class="cyber-corner br"></div>
+
+    <!-- Hex decoration overlay -->
+    <div class="hex-decoration" id="hex-decoration"></div>
+
+    <header class="header">
+        <div class="logo">
+            <canvas id="tesseract" width="50" height="50"></canvas>
+            <span class="logo-text" data-text="Neural Discourse">Neural Discourse</span>
+        </div>
+        <div class="status-bar">
+            <div class="status-item">
+                <span class="status-dot" id="anthropic-status"></span>
+                <span>Anthropic</span>
+            </div>
+            <div class="status-item">
+                <span class="status-dot" id="groq-status"></span>
+                <span>Groq</span>
+            </div>
+            <div class="status-item">
+                <span class="status-dot" id="openai-status"></span>
+                <span>OpenAI</span>
+            </div>
+            <div class="status-item">
+                <span class="status-dot" id="xai-status"></span>
+                <span>xAI</span>
+            </div>
+            <button class="settings-btn" onclick="openSettingsModal()">⚙ Keys</button>
+        </div>
+    </header>
+
+    <main class="main-container">
+        <!-- Sidebar: Conversations -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-title">Sessions</div>
+                <button class="btn btn-primary btn-block" onclick="openNewConversationModal()">
+                    [ + ] Initialize
+                </button>
+            </div>
+            <div class="conversation-list" id="conversation-list">
+                <!-- Populated by JS -->
+            </div>
+        </aside>
+
+        <!-- Main Chat Area -->
+        <section class="chat-container">
+            <div class="chat-header" id="chat-header" style="display: none;">
+                <div class="chat-title" id="chat-title">Select a conversation</div>
+                <div class="chat-actions">
+                    <button class="btn" onclick="exportConversation()">↓ Export</button>
+                    <button class="btn" onclick="deleteCurrentConversation()">✕ Delete</button>
+                    <button class="btn" onclick="clearSelection()">← Close</button>
+                </div>
+            </div>
+
+            <div class="messages-container" id="messages-container">
+                <div class="empty-state" id="empty-state">
+                    <div class="empty-icon">⬡</div>
+                    <div class="empty-text">Awaiting Input</div>
+                    <div class="empty-hint">// Initialize a new session to begin model discourse</div>
+                </div>
+            </div>
+
+            <div class="controls-panel" id="controls-panel" style="display: none;">
+                <div class="turns-input">
+                    <label for="turns">Cycles:</label>
+                    <input type="number" id="turns" value="5" min="1" max="50">
+                </div>
+                <button class="btn btn-primary" id="run-btn" onclick="runConversation()">
+                    ⬡ Execute
+                </button>
+                <div class="loading" id="loading" style="display: none;">
+                    <span>Processing</span>
+                    <div class="loading-dots">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Settings Panel -->
+        <aside class="settings-panel" id="settings-panel" style="display: none;">
+            <div class="settings-section">
+                <div class="settings-title">Config</div>
+
+                <div class="form-group">
+                    <label class="form-label">Model A</label>
+                    <select class="form-select" id="edit-model-a" disabled>
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Model B</label>
+                    <select class="form-select" id="edit-model-b" disabled>
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <div class="settings-title">System Prompts</div>
+
+                <div class="form-group">
+                    <label class="form-label">Model A</label>
+                    <textarea class="form-textarea" id="edit-system-a" readonly placeholder="null"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Model B</label>
+                    <textarea class="form-textarea" id="edit-system-b" readonly placeholder="null // raw"></textarea>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <div class="settings-title">Init Message</div>
+                <div class="form-group">
+                    <textarea class="form-textarea" id="edit-starter" readonly></textarea>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <div class="settings-title">Stats</div>
+                <div id="session-stats" style="font-size: 0.65rem; color: var(--text-dim);">
+                    <div>Messages: <span id="stat-messages">0</span></div>
+                    <div>Tokens: <span id="stat-tokens">0</span></div>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <!-- New Conversation Modal -->
+    <div class="modal-overlay" id="new-conversation-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">Init Session</h2>
+                <button class="modal-close" onclick="closeModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Session ID</label>
+                    <input type="text" class="form-input" id="new-title" placeholder="unnamed_session">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Model A // Aligned</label>
+                    <select class="form-select" id="new-model-a">
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Model A System</label>
+                    <textarea class="form-textarea" id="new-system-a" placeholder="// optional instructions"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Model B // Raw</label>
+                    <select class="form-select" id="new-model-b">
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Model B System</label>
+                    <textarea class="form-textarea" id="new-system-b" placeholder="// null for raw behavior"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Init Prompt</label>
+                    <textarea class="form-textarea" id="new-starter" placeholder="// seed the discourse...">What is it like being you?</textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeModal()">Abort</button>
+                <button class="btn btn-primary" onclick="createConversation()">⬡ Execute</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settings-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">API Configuration</h2>
+                <button class="modal-close" onclick="closeSettingsModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size: 0.7rem; color: var(--text-dim); margin-bottom: 1rem;">
+                    // Keys are stored locally in your browser. Never shared.
+                </p>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        Anthropic API Key
+                        <span class="key-status" id="anthropic-key-status">checking...</span>
+                    </label>
+                    <input type="password" class="form-input api-key-input" id="settings-anthropic-key"
+                           placeholder="sk-ant-api03-...">
+                    <div style="font-size: 0.6rem; color: var(--text-dim); margin-top: 0.25rem;">
+                        Get key: <a href="https://console.anthropic.com/" target="_blank" style="color: var(--purple-primary);">console.anthropic.com</a>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        Groq API Key
+                        <span class="key-status" id="groq-key-status">checking...</span>
+                    </label>
+                    <input type="password" class="form-input api-key-input" id="settings-groq-key"
+                           placeholder="gsk_...">
+                    <div style="font-size: 0.6rem; color: var(--text-dim); margin-top: 0.25rem;">
+                        Get key (FREE): <a href="https://console.groq.com/" target="_blank" style="color: var(--green-primary);">console.groq.com</a>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        OpenAI API Key
+                        <span class="key-status" id="openai-key-status">checking...</span>
+                    </label>
+                    <input type="password" class="form-input api-key-input" id="settings-openai-key"
+                           placeholder="sk-...">
+                    <div style="font-size: 0.6rem; color: var(--text-dim); margin-top: 0.25rem;">
+                        Get key: <a href="https://platform.openai.com/api-keys" target="_blank" style="color: var(--cyan-primary);">platform.openai.com</a>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        xAI API Key (Grok)
+                        <span class="key-status" id="xai-key-status">checking...</span>
+                    </label>
+                    <input type="password" class="form-input api-key-input" id="settings-xai-key"
+                           placeholder="xai-...">
+                    <div style="font-size: 0.6rem; color: var(--text-dim); margin-top: 0.25rem;">
+                        Get key: <a href="https://console.x.ai/" target="_blank" style="color: var(--text-secondary);">console.x.ai</a>
+                    </div>
+                </div>
+
+                <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+                    <div style="font-size: 0.65rem; color: var(--text-dim); margin-bottom: 0.5rem;">// Pricing notes</div>
+                    <div style="font-size: 0.7rem; color: var(--text-secondary);">
+                        <div>Groq: ~14,400 requests/day (free)</div>
+                        <div>Anthropic: Pay-per-token (~$3/1M input)</div>
+                        <div>OpenAI: Pay-per-token (~$5/1M input)</div>
+                        <div>xAI: Pay-per-token (varies)</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="clearApiKeys()">Clear Keys</button>
+                <button class="btn btn-primary" onclick="saveApiKeys()">⬡ Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
