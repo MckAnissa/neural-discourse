@@ -1,19 +1,21 @@
 from typing import AsyncGenerator
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from app.providers.base import BaseProvider, ModelInfo, ChatMessage, ChatResponse
 from app.config import get_settings
 
 
 class GeminiProvider(BaseProvider):
-    """Google Gemini provider."""
+    """Google Gemini provider using the new google-genai SDK."""
 
     def __init__(self, api_key: str | None = None):
         settings = get_settings()
         self.api_key = api_key or settings.gemini_api_key
         if self.api_key:
-            genai.configure(api_key=self.api_key)
+            self.client = genai.Client(api_key=self.api_key)
             self.configured = True
         else:
+            self.client = None
             self.configured = False
 
     def get_available_models(self) -> list[ModelInfo]:
@@ -44,27 +46,25 @@ class GeminiProvider(BaseProvider):
         model: str,
         system_prompt: str | None = None,
     ) -> ChatResponse:
-        if not self.configured:
+        if not self.client:
             raise ValueError("Gemini API key not configured")
 
-        gemini_model = genai.GenerativeModel(
-            model_name=model,
+        # Build contents list for Gemini format
+        contents = []
+        for msg in messages:
+            role = "user" if msg.role == "user" else "model"
+            contents.append(types.Content(role=role, parts=[types.Part(text=msg.content)]))
+
+        # Build config
+        config = types.GenerateContentConfig(
+            max_output_tokens=4096,
             system_instruction=system_prompt if system_prompt else None,
         )
 
-        # Build conversation history for Gemini format
-        history = []
-        for msg in messages[:-1]:
-            role = "user" if msg.role == "user" else "model"
-            history.append({"role": role, "parts": [msg.content]})
-
-        chat = gemini_model.start_chat(history=history)
-
-        # Send last message
-        last_message = messages[-1].content if messages else ""
-        response = await chat.send_message_async(
-            last_message,
-            generation_config=genai.GenerationConfig(max_output_tokens=4096)
+        response = await self.client.aio.models.generate_content(
+            model=model,
+            contents=contents,
+            config=config,
         )
 
         # Extract token counts if available
@@ -88,29 +88,24 @@ class GeminiProvider(BaseProvider):
         model: str,
         system_prompt: str | None = None,
     ) -> AsyncGenerator[str, None]:
-        if not self.configured:
+        if not self.client:
             raise ValueError("Gemini API key not configured")
 
-        gemini_model = genai.GenerativeModel(
-            model_name=model,
+        contents = []
+        for msg in messages:
+            role = "user" if msg.role == "user" else "model"
+            contents.append(types.Content(role=role, parts=[types.Part(text=msg.content)]))
+
+        config = types.GenerateContentConfig(
+            max_output_tokens=4096,
             system_instruction=system_prompt if system_prompt else None,
         )
 
-        history = []
-        for msg in messages[:-1]:
-            role = "user" if msg.role == "user" else "model"
-            history.append({"role": role, "parts": [msg.content]})
-
-        chat = gemini_model.start_chat(history=history)
-        last_message = messages[-1].content if messages else ""
-
-        response = await chat.send_message_async(
-            last_message,
-            generation_config=genai.GenerationConfig(max_output_tokens=4096),
-            stream=True
-        )
-
-        async for chunk in response:
+        async for chunk in self.client.aio.models.generate_content_stream(
+            model=model,
+            contents=contents,
+            config=config,
+        ):
             if chunk.text:
                 yield chunk.text
 
