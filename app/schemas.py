@@ -1,14 +1,22 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
+import re
 
 
 class ConversationCreate(BaseModel):
-    title: str | None = "Untitled"
-    model_a: str
-    model_b: str
-    system_prompt_a: str | None = None
-    system_prompt_b: str | None = None
-    starter_message: str
+    title: str | None = Field(default="Untitled", max_length=255)
+    model_a: str = Field(..., max_length=100)
+    model_b: str = Field(..., max_length=100)
+    system_prompt_a: str | None = Field(default=None, max_length=10000)
+    system_prompt_b: str | None = Field(default=None, max_length=10000)
+    starter_message: str = Field(..., min_length=1, max_length=10000)
+
+    @field_validator('title')
+    @classmethod
+    def sanitize_title(cls, v):
+        if v:
+            v = re.sub(r'[<>]', '', v)
+        return v
 
 
 class ConversationResponse(BaseModel):
@@ -40,8 +48,8 @@ class MessageResponse(BaseModel):
 
 
 class RunConversationRequest(BaseModel):
-    conversation_id: int
-    turns: int = 5  # Number of back-and-forth exchanges
+    conversation_id: int = Field(..., gt=0)
+    turns: int = Field(default=5, ge=1, le=50)  # 1-50 turns allowed
 
 
 class ProviderStatus(BaseModel):

@@ -7,7 +7,8 @@ class Settings(BaseSettings):
     groq_api_key: str = ""
     openai_api_key: str = ""
     xai_api_key: str = ""
-    together_api_key: str = ""
+    kimi_api_key: str = ""
+    gemini_api_key: str = ""
     database_url: str = "sqlite+aiosqlite:///./conversations.db"
 
     class Config:

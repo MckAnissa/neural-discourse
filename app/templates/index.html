@@ -23,7 +23,7 @@
 
     <header class="header">
         <div class="logo">
-            <canvas id="tesseract" width="50" height="50"></canvas>
+            <canvas id="tesseract" width="100" height="100"></canvas>
             <span class="logo-text" data-text="Neural Discourse">Neural Discourse</span>
         </div>
         <div class="status-bar">
@@ -43,10 +43,28 @@
                 <span class="status-dot" id="xai-status"></span>
                 <span>xAI</span>
             </div>
+            <div class="status-item">
+                <span class="status-dot" id="kimi-status"></span>
+                <span>Kimi</span>
+            </div>
+            <div class="status-item">
+                <span class="status-dot" id="gemini-status"></span>
+                <span>Gemini</span>
+            </div>
             <button class="settings-btn" onclick="openSettingsModal()">⚙ Keys</button>
         </div>
     </header>
 
+    <!-- Tab Navigation -->
+    <nav class="tab-nav">
+        <button class="tab-btn active" data-tab="chat">// Chat</button>
+        <button class="tab-btn" data-tab="instructions">// Instructions</button>
+        <button class="tab-btn" data-tab="history">// History</button>
+        <button class="tab-btn" data-tab="credits">// Credits</button>
+    </nav>
+
+    <!-- Tab Content: Chat (Default) -->
+    <div class="tab-content active" id="tab-chat">
     <main class="main-container">
         <!-- Sidebar: Conversations -->
         <aside class="sidebar">
@@ -149,6 +167,123 @@
             </div>
         </aside>
     </main>
+    </div>
+
+    <!-- Tab Content: Instructions -->
+    <div class="tab-content" id="tab-instructions">
+        <div class="info-page">
+            <div class="info-section">
+                <h2 class="info-title">⬡ What is Neural Discourse?</h2>
+                <p class="info-text">
+                    Neural Discourse is a framework for orchestrating conversations between AI models.
+                    Watch as two models engage in autonomous dialogue, exchanging ideas and exploring concepts
+                    without human intervention.
+                </p>
+            </div>
+
+            <div class="info-section">
+                <h2 class="info-title">// How to Use</h2>
+                <div class="info-steps">
+                    <div class="info-step">
+                        <span class="step-number">01</span>
+                        <div>
+                            <strong>Configure API Keys (Optional)</strong>
+                            <p>Some providers may already be configured on the server. Check the status dots in the header - green means ready to use. You can add your own keys via "Keys" button if needed.</p>
+                        </div>
+                    </div>
+                    <div class="info-step">
+                        <span class="step-number">02</span>
+                        <div>
+                            <strong>Initialize Session</strong>
+                            <p>Click "Initialize" to create a new conversation. Select two models and provide an opening prompt.</p>
+                        </div>
+                    </div>
+                    <div class="info-step">
+                        <span class="step-number">03</span>
+                        <div>
+                            <strong>Execute Cycles</strong>
+                            <p>Set the number of turns and click "Execute". The models will take turns responding to each other.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-section">
+                <h2 class="info-title">// Supported Providers</h2>
+                <div class="provider-tags">
+                    <span class="provider-tag anthropic">Anthropic</span>
+                    <span class="provider-tag groq">Groq</span>
+                    <span class="provider-tag openai">OpenAI</span>
+                    <span class="provider-tag xai">xAI</span>
+                    <span class="provider-tag kimi">Kimi</span>
+                    <span class="provider-tag gemini">Gemini</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab Content: History -->
+    <div class="tab-content" id="tab-history">
+        <div class="history-page">
+            <div class="history-header">
+                <h2 class="info-title">⬡ Session Network</h2>
+                <p class="info-text">Visualization of conversation clusters based on shared topics.</p>
+            </div>
+            <div class="history-canvas-container">
+                <canvas id="history-canvas"></canvas>
+            </div>
+            <div class="history-legend">
+                <span class="legend-item"><span class="legend-dot neuron"></span> Session Node</span>
+                <span class="legend-item"><span class="legend-line"></span> Shared Topics</span>
+                <span class="legend-item">Hover for tags</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab Content: Credits -->
+    <div class="tab-content" id="tab-credits">
+        <div class="info-page">
+            <div class="info-section">
+                <h2 class="info-title">⬡ Neural Discourse</h2>
+                <p class="info-text version">Version 1.0.0</p>
+            </div>
+
+            <div class="info-section">
+                <h2 class="info-title">// Contact</h2>
+                <p class="info-text">
+                    <a href="mailto:mckanissa@proton.me" class="contact-link">mckanissa@proton.me</a>
+                </p>
+            </div>
+
+            <div class="info-section">
+                <h2 class="info-title">// Technologies</h2>
+                <div class="tech-list">
+                    <span class="tech-item">FastAPI</span>
+                    <span class="tech-item">Python 3.11+</span>
+                    <span class="tech-item">SQLite</span>
+                    <span class="tech-item">Vanilla JS</span>
+                    <span class="tech-item">CSS3</span>
+                </div>
+            </div>
+
+            <div class="info-section">
+                <h2 class="info-title">// AI Providers</h2>
+                <div class="tech-list">
+                    <span class="tech-item">Anthropic Claude</span>
+                    <span class="tech-item">OpenAI GPT</span>
+                    <span class="tech-item">Groq (Llama/Gemma)</span>
+                    <span class="tech-item">xAI Grok</span>
+                    <span class="tech-item">Moonshot Kimi</span>
+                    <span class="tech-item">Google Gemini</span>
+                </div>
+            </div>
+
+            <div class="info-section">
+                <h2 class="info-title">// License</h2>
+                <p class="info-text">MIT License - Open Source</p>
+            </div>
+        </div>
+    </div>
 
     <!-- New Conversation Modal -->
     <div class="modal-overlay" id="new-conversation-modal">
@@ -259,13 +394,38 @@
                     </div>
                 </div>
 
+                <div class="form-group">
+                    <label class="form-label">
+                        Kimi API Key (Moonshot)
+                        <span class="key-status" id="kimi-key-status">checking...</span>
+                    </label>
+                    <input type="password" class="form-input api-key-input" id="settings-kimi-key"
+                           placeholder="sk-...">
+                    <div style="font-size: 0.6rem; color: var(--text-dim); margin-top: 0.25rem;">
+                        Get key: <a href="https://platform.moonshot.cn/" target="_blank" style="color: var(--cyan-primary);">platform.moonshot.cn</a>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        Gemini API Key (Google)
+                        <span class="key-status" id="gemini-key-status">checking...</span>
+                    </label>
+                    <input type="password" class="form-input api-key-input" id="settings-gemini-key"
+                           placeholder="AI...">
+                    <div style="font-size: 0.6rem; color: var(--text-dim); margin-top: 0.25rem;">
+                        Get key: <a href="https://aistudio.google.com/apikey" target="_blank" style="color: var(--blue-primary);">aistudio.google.com</a>
+                    </div>
+                </div>
+
                 <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
                     <div style="font-size: 0.65rem; color: var(--text-dim); margin-bottom: 0.5rem;">// Pricing notes</div>
                     <div style="font-size: 0.7rem; color: var(--text-secondary);">
                         <div>Groq: ~14,400 requests/day (free)</div>
+                        <div>Gemini: Free tier available</div>
                         <div>Anthropic: Pay-per-token (~$3/1M input)</div>
                         <div>OpenAI: Pay-per-token (~$5/1M input)</div>
-                        <div>xAI: Pay-per-token (varies)</div>
+                        <div>xAI/Kimi: Pay-per-token (varies)</div>
                     </div>
                 </div>
             </div>

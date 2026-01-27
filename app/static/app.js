@@ -12,12 +12,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     initTesseract();
     initHexDecoration();
     initGlitchEffect();
+    initTabNavigation();
     await loadProviders();
     await loadConversations();
     console.log('%c⬡ NEURAL DISCOURSE INITIALIZED', 'color: #00ff9d; font-size: 14px; font-weight: bold;');
 });
 
-// Rotating 3D Cube Animation (blue/cyan)
+// 4D Tesseract (Hypercube) Animation
 function initTesseract() {
     const canvas = document.getElementById('tesseract');
     if (!canvas) return;
@@ -26,117 +27,134 @@ function initTesseract() {
 
     // High DPI support for sharp rendering
     const dpr = window.devicePixelRatio || 1;
-    const displaySize = 44;
+    const displaySize = 100;
     canvas.width = displaySize * dpr;
     canvas.height = displaySize * dpr;
     canvas.style.width = displaySize + 'px';
     canvas.style.height = displaySize + 'px';
     ctx.scale(dpr, dpr);
 
-    const size = displaySize;
-    const scale = 12;
+    const centerX = displaySize / 2;
+    const centerY = displaySize / 2;
+    const scale = 34;
 
-    // 8 vertices of a cube
-    const vertices = [
-        [-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1],
-        [-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1]
-    ];
-
-    // 12 edges of a cube
-    const edges = [
-        [0, 1], [1, 2], [2, 3], [3, 0],
-        [4, 5], [5, 6], [6, 7], [7, 4],
-        [0, 4], [1, 5], [2, 6], [3, 7]
-    ];
-
-    let angleX = 0;
-    let angleY = 0;
-    let angleZ = 0;
-
-    function rotate3D(v, ax, ay, az) {
-        let [x, y, z] = v;
-
-        // Rotate X
-        let cosX = Math.cos(ax), sinX = Math.sin(ax);
-        [y, z] = [y * cosX - z * sinX, y * sinX + z * cosX];
-
-        // Rotate Y
-        let cosY = Math.cos(ay), sinY = Math.sin(ay);
-        [x, z] = [x * cosY + z * sinY, -x * sinY + z * cosY];
-
-        // Rotate Z
-        let cosZ = Math.cos(az), sinZ = Math.sin(az);
-        [x, y] = [x * cosZ - y * sinZ, x * sinZ + y * cosZ];
-
-        return [x, y, z];
+    // 16 vertices of a tesseract (4D hypercube): all combinations of +-1 in 4D
+    const vertices4D = [];
+    for (let i = 0; i < 16; i++) {
+        vertices4D.push([
+            (i & 1) ? 1 : -1,
+            (i & 2) ? 1 : -1,
+            (i & 4) ? 1 : -1,
+            (i & 8) ? 1 : -1
+        ]);
     }
 
-    function project3Dto2D(v) {
-        const [x, y, z] = v;
-        const distance = 3;
-        const w = 1 / (distance - z);
-        return [x * w * scale + size / 2, y * w * scale + size / 2, z];
+    // 32 edges - connect vertices differing by exactly one coordinate
+    const edges = [];
+    for (let i = 0; i < 16; i++) {
+        for (let j = i + 1; j < 16; j++) {
+            let diff = 0;
+            for (let k = 0; k < 4; k++) {
+                if (vertices4D[i][k] !== vertices4D[j][k]) diff++;
+            }
+            if (diff === 1) edges.push([i, j]);
+        }
     }
+
+    let time = 0;
 
     function draw() {
-        ctx.clearRect(0, 0, size, size);
+        // Clear canvas completely for transparent background
+        ctx.clearRect(0, 0, displaySize, displaySize);
 
-        const projected = vertices.map(v => {
-            const rotated = rotate3D(v, angleX, angleY, angleZ);
-            return project3Dto2D(rotated);
+        // Multi-axis 4D rotation angles
+        const a1 = time * 0.015;  // XW plane
+        const a2 = time * 0.012;  // YZ plane
+        const a3 = time * 0.008;  // XY plane
+        const a4 = time * 0.018;  // ZW plane
+
+        // Project all vertices
+        const projected = vertices4D.map(v => {
+            let [x, y, z, w] = v;
+
+            // XW rotation
+            let c = Math.cos(a1), s = Math.sin(a1);
+            [x, w] = [x * c - w * s, x * s + w * c];
+
+            // YZ rotation
+            c = Math.cos(a2); s = Math.sin(a2);
+            [y, z] = [y * c - z * s, y * s + z * c];
+
+            // XY rotation
+            c = Math.cos(a3); s = Math.sin(a3);
+            [x, y] = [x * c - y * s, x * s + y * c];
+
+            // ZW rotation
+            c = Math.cos(a4); s = Math.sin(a4);
+            [z, w] = [z * c - w * s, z * s + w * c];
+
+            // 4D to 3D perspective projection
+            const d4 = 2.5;
+            const w4 = 1 / (d4 - w);
+            const x3 = x * w4;
+            const y3 = y * w4;
+            const z3 = z * w4;
+
+            // 3D to 2D perspective projection
+            const d3 = 3;
+            const w3 = 1 / (d3 - z3);
+
+            return {
+                x: x3 * w3 * scale + centerX,
+                y: y3 * w3 * scale + centerY,
+                depth: z3 + w  // Combined depth for rendering order
+            };
         });
 
-        // Sort edges by depth for proper rendering
-        const sortedEdges = edges.map(([i, j]) => {
-            const avgZ = (projected[i][2] + projected[j][2]) / 2;
-            return { i, j, depth: avgZ };
-        }).sort((a, b) => a.depth - b.depth);
+        // Sort and draw edges
+        const edgeData = edges.map(([i, j]) => ({
+            i, j,
+            depth: (projected[i].depth + projected[j].depth) / 2
+        })).sort((a, b) => a.depth - b.depth);
 
-        // Draw edges with blue/cyan gradient based on depth
-        sortedEdges.forEach(({ i, j, depth }) => {
-            const [x1, y1] = projected[i];
-            const [x2, y2] = projected[j];
+        edgeData.forEach(({ i, j, depth }) => {
+            const p1 = projected[i];
+            const p2 = projected[j];
 
-            // Blue to cyan color range (hue 200-220)
-            const hue = 200 + depth * 20;
-            const lightness = 50 + depth * 15;
-            const alpha = 0.6 + (depth + 1) * 0.2;
+            // Depth-based alpha and width for 3D effect
+            const normalizedDepth = (depth + 2) / 4;
+            const alpha = 0.3 + normalizedDepth * 0.7;
+            const lineWidth = 0.8 + normalizedDepth * 1.2;
 
             ctx.beginPath();
-            ctx.moveTo(x1, y1);
-            ctx.lineTo(x2, y2);
-            ctx.strokeStyle = `hsla(${hue}, 100%, ${lightness}%, ${alpha})`;
-            ctx.lineWidth = 1.5 + (depth + 1) * 0.3;
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.strokeStyle = `rgba(0, 255, 213, ${Math.min(alpha, 1)})`;
+            ctx.lineWidth = Math.max(lineWidth, 0.8);
             ctx.lineCap = 'round';
             ctx.stroke();
         });
 
-        // Draw vertices
-        const sortedVerts = projected.map((p, idx) => ({ p, idx }))
-            .sort((a, b) => a.p[2] - b.p[2]);
+        // Draw small vertices at corners (subtle, not prominent)
+        projected.forEach(p => {
+            const normalizedDepth = (p.depth + 2) / 4;
+            const alpha = 0.4 + normalizedDepth * 0.4;
 
-        sortedVerts.forEach(({ p }) => {
-            const [x, y, z] = p;
-            const radius = 2 + (z + 1) * 0.8;
-            const hue = 200 + z * 20;
+            // Small dot at vertex
             ctx.beginPath();
-            ctx.arc(x, y, radius, 0, Math.PI * 2);
-            ctx.fillStyle = `hsla(${hue}, 100%, 70%, 0.9)`;
+            ctx.arc(p.x, p.y, 1.2, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(0, 255, 213, ${Math.min(alpha + 0.2, 1)})`;
             ctx.fill();
         });
 
-        // Smooth rotation
-        angleX += 0.015;
-        angleY += 0.02;
-        angleZ += 0.008;
-
+        time++;
         requestAnimationFrame(draw);
     }
 
     draw();
 }
 
-// Enhanced Matrix rain - purple and green mix
+// Matrix rain - green and cyan only
 function initMatrixBackground() {
     const canvas = document.getElementById('matrix-bg');
     const ctx = canvas.getContext('2d');
@@ -152,15 +170,14 @@ function initMatrixBackground() {
     const drops = [];
     const speeds = [];
     const brightness = [];
-    const colorType = []; // 0 = green, 1 = purple, 2 = cyan
+    const colorType = []; // 0 = green, 1 = cyan
 
     for (let i = 0; i < columns; i++) {
         drops[i] = Math.random() * -100;
         speeds[i] = 0.5 + Math.random() * 0.5;
         brightness[i] = 0.7 + Math.random() * 0.3;
-        // Mix: 40% green, 40% purple, 20% cyan
-        const rand = Math.random();
-        colorType[i] = rand < 0.4 ? 0 : (rand < 0.8 ? 1 : 2);
+        // Mix: 70% green, 30% cyan (no purple)
+        colorType[i] = Math.random() < 0.7 ? 0 : 1;
     }
 
     function draw() {
@@ -177,15 +194,11 @@ function initMatrixBackground() {
             // Bright head of the stream
             if (Math.random() > 0.9) {
                 ctx.fillStyle = '#ffffff';
-                ctx.shadowColor = colorType[i] === 1 ? '#bf7af0' : (colorType[i] === 2 ? '#00d4ff' : '#00ff9d');
+                ctx.shadowColor = colorType[i] === 1 ? '#00ffd5' : '#00ff9d';
                 ctx.shadowBlur = 12;
             } else {
                 const b = brightness[i];
                 if (colorType[i] === 1) {
-                    // Purple stream
-                    const intensity = Math.floor(120 + b * 80);
-                    ctx.fillStyle = `rgb(${intensity}, ${Math.floor(intensity * 0.5)}, ${Math.floor(intensity * 1.2)})`;
-                } else if (colorType[i] === 2) {
                     // Cyan stream
                     const intensity = Math.floor(180 + b * 75);
                     ctx.fillStyle = `rgb(0, ${Math.floor(intensity * 0.85)}, ${intensity})`;
@@ -205,8 +218,7 @@ function initMatrixBackground() {
                 brightness[i] = 0.7 + Math.random() * 0.3;
                 // Occasionally change stream color
                 if (Math.random() > 0.7) {
-                    const rand = Math.random();
-                    colorType[i] = rand < 0.4 ? 0 : (rand < 0.8 ? 1 : 2);
+                    colorType[i] = Math.random() < 0.7 ? 0 : 1;
                 }
             }
             drops[i] += speeds[i];
@@ -761,7 +773,9 @@ function getStoredKeys() {
         anthropic: localStorage.getItem('anthropic_api_key') || '',
         groq: localStorage.getItem('groq_api_key') || '',
         openai: localStorage.getItem('openai_api_key') || '',
-        xai: localStorage.getItem('xai_api_key') || ''
+        xai: localStorage.getItem('xai_api_key') || '',
+        kimi: localStorage.getItem('kimi_api_key') || '',
+        gemini: localStorage.getItem('gemini_api_key') || ''
     };
 }
 
@@ -772,6 +786,8 @@ function getApiHeaders() {
     if (keys.groq) headers['X-Groq-Key'] = keys.groq;
     if (keys.openai) headers['X-OpenAI-Key'] = keys.openai;
     if (keys.xai) headers['X-XAI-Key'] = keys.xai;
+    if (keys.kimi) headers['X-Kimi-Key'] = keys.kimi;
+    if (keys.gemini) headers['X-Gemini-Key'] = keys.gemini;
     return headers;
 }
 
@@ -785,6 +801,8 @@ function openSettingsModal() {
     document.getElementById('settings-groq-key').value = keys.groq;
     document.getElementById('settings-openai-key').value = keys.openai;
     document.getElementById('settings-xai-key').value = keys.xai;
+    document.getElementById('settings-kimi-key').value = keys.kimi;
+    document.getElementById('settings-gemini-key').value = keys.gemini;
 
     updateKeyStatuses();
 }
@@ -800,6 +818,8 @@ async function updateKeyStatuses() {
     const groqStatus = document.getElementById('groq-key-status');
     const openaiStatus = document.getElementById('openai-key-status');
     const xaiStatus = document.getElementById('xai-key-status');
+    const kimiStatus = document.getElementById('kimi-key-status');
+    const geminiStatus = document.getElementById('gemini-key-status');
 
     // Check server-side config + local keys
     try {
@@ -812,6 +832,8 @@ async function updateKeyStatuses() {
         const groqProvider = providers.find(p => p.name === 'groq');
         const openaiProvider = providers.find(p => p.name === 'openai');
         const xaiProvider = providers.find(p => p.name === 'xai');
+        const kimiProvider = providers.find(p => p.name === 'kimi');
+        const geminiProvider = providers.find(p => p.name === 'gemini');
 
         // Update status for each provider
         function setStatus(el, configured, localKey) {
@@ -829,6 +851,8 @@ async function updateKeyStatuses() {
         setStatus(groqStatus, groqProvider?.configured, keys.groq);
         setStatus(openaiStatus, openaiProvider?.configured, keys.openai);
         setStatus(xaiStatus, xaiProvider?.configured, keys.xai);
+        setStatus(kimiStatus, kimiProvider?.configured, keys.kimi);
+        setStatus(geminiStatus, geminiProvider?.configured, keys.gemini);
     } catch (e) {
         console.error('Failed to check key status:', e);
     }
@@ -839,13 +863,17 @@ function saveApiKeys() {
     const groqKey = document.getElementById('settings-groq-key').value.trim();
     const openaiKey = document.getElementById('settings-openai-key').value.trim();
     const xaiKey = document.getElementById('settings-xai-key').value.trim();
+    const kimiKey = document.getElementById('settings-kimi-key').value.trim();
+    const geminiKey = document.getElementById('settings-gemini-key').value.trim();
 
     // Save or remove each key
     const keys = [
         ['anthropic_api_key', anthropicKey],
         ['groq_api_key', groqKey],
         ['openai_api_key', openaiKey],
-        ['xai_api_key', xaiKey]
+        ['xai_api_key', xaiKey],
+        ['kimi_api_key', kimiKey],
+        ['gemini_api_key', geminiKey]
     ];
 
     keys.forEach(([storageKey, value]) => {
@@ -869,10 +897,14 @@ function clearApiKeys() {
     localStorage.removeItem('groq_api_key');
     localStorage.removeItem('openai_api_key');
     localStorage.removeItem('xai_api_key');
+    localStorage.removeItem('kimi_api_key');
+    localStorage.removeItem('gemini_api_key');
     document.getElementById('settings-anthropic-key').value = '';
     document.getElementById('settings-groq-key').value = '';
     document.getElementById('settings-openai-key').value = '';
     document.getElementById('settings-xai-key').value = '';
+    document.getElementById('settings-kimi-key').value = '';
+    document.getElementById('settings-gemini-key').value = '';
     loadProviders();
     updateKeyStatuses();
     console.log('%c⬡ API keys cleared', 'color: #bf7af0;');
@@ -882,5 +914,408 @@ function clearApiKeys() {
 document.getElementById('settings-modal')?.addEventListener('click', (e) => {
     if (e.target.classList.contains('modal-overlay')) {
         closeSettingsModal();
+    }
+});
+
+// ============================================
+// TAB NAVIGATION
+// ============================================
+
+function initTabNavigation() {
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tabId = btn.dataset.tab;
+            switchTab(tabId);
+        });
+    });
+}
+
+function switchTab(tabId) {
+    // Update button states
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tabId);
+    });
+
+    // Update content visibility
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.toggle('active', content.id === `tab-${tabId}`);
+    });
+
+    // Initialize history visualization when history tab is selected
+    if (tabId === 'history') {
+        initHistoryVisualization();
+    }
+}
+
+// ============================================
+// HISTORY VISUALIZATION - Neural Network Graph
+// ============================================
+
+let historyNodes = [];
+let historyEdges = [];
+let historyAnimationId = null;
+let hoveredNode = null;
+
+async function initHistoryVisualization() {
+    const canvas = document.getElementById('history-canvas');
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+
+    // Set canvas size
+    const container = canvas.parentElement;
+    canvas.width = container.clientWidth;
+    canvas.height = container.clientHeight;
+
+    // Cancel previous animation if any
+    if (historyAnimationId) {
+        cancelAnimationFrame(historyAnimationId);
+    }
+
+    // Fetch conversations
+    try {
+        const response = await fetch('/api/conversations/', {
+            headers: getApiHeaders()
+        });
+        const conversations = await response.json();
+
+        if (conversations.length === 0) {
+            drawEmptyState(ctx, canvas);
+            return;
+        }
+
+        // Fetch messages for each conversation to build nodes
+        const nodes = [];
+        const stopWords = new Set(['the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
+            'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might',
+            'must', 'shall', 'can', 'need', 'dare', 'ought', 'used', 'to', 'of', 'in', 'for', 'on', 'with',
+            'at', 'by', 'from', 'as', 'into', 'through', 'during', 'before', 'after', 'above', 'below',
+            'between', 'under', 'again', 'further', 'then', 'once', 'here', 'there', 'when', 'where', 'why',
+            'how', 'all', 'each', 'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'only',
+            'own', 'same', 'so', 'than', 'too', 'very', 'just', 'and', 'but', 'if', 'or', 'because', 'until',
+            'while', 'although', 'what', 'which', 'who', 'this', 'that', 'these', 'those', 'am', 'it', 'its',
+            'i', 'you', 'he', 'she', 'we', 'they', 'my', 'your', 'his', 'her', 'our', 'their', 'me', 'him',
+            'us', 'them', 'about', 'like', 'also', 'well', 'even', 'really', 'think', 'know', 'say', 'get']);
+
+        for (const conv of conversations) {
+            const msgResponse = await fetch(`/api/conversations/${conv.id}/messages`, {
+                headers: getApiHeaders()
+            });
+            const messages = await msgResponse.json();
+
+            // Extract keywords from messages
+            const allText = messages.map(m => m.content).join(' ').toLowerCase();
+            const words = allText.match(/\b[a-z]{4,}\b/g) || [];
+            const wordCounts = {};
+
+            words.forEach(word => {
+                if (!stopWords.has(word)) {
+                    wordCounts[word] = (wordCounts[word] || 0) + 1;
+                }
+            });
+
+            // Get top 5 keywords
+            const keywords = Object.entries(wordCounts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5)
+                .map(([word]) => word);
+
+            // Calculate age (for color)
+            const createdAt = new Date(conv.created_at);
+            const age = Date.now() - createdAt.getTime();
+            const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+            nodes.push({
+                id: conv.id,
+                title: conv.title || 'Untitled',
+                keywords: keywords,
+                messageCount: messages.length,
+                age: Math.min(age / maxAge, 1),
+                x: Math.random() * (canvas.width - 100) + 50,
+                y: Math.random() * (canvas.height - 100) + 50,
+                vx: 0,
+                vy: 0,
+                radius: Math.min(10 + messages.length * 2, 30)
+            });
+        }
+
+        // Build edges based on shared keywords (1+ shared for neural network look)
+        const edges = [];
+        for (let i = 0; i < nodes.length; i++) {
+            for (let j = i + 1; j < nodes.length; j++) {
+                const shared = nodes[i].keywords.filter(k => nodes[j].keywords.includes(k));
+                if (shared.length >= 1) {
+                    edges.push({
+                        source: i,
+                        target: j,
+                        strength: shared.length,
+                        sharedKeywords: shared
+                    });
+                }
+            }
+        }
+
+        historyNodes = nodes;
+        historyEdges = edges;
+        hoveredNode = null;
+
+        // Start animation
+        animateGraph(ctx, canvas);
+
+    } catch (e) {
+        console.error('Failed to load history:', e);
+        drawEmptyState(ctx, canvas);
+    }
+}
+
+function drawEmptyState(ctx, canvas) {
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = '#4a5568';
+    ctx.font = '14px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText('No conversations to visualize', canvas.width / 2, canvas.height / 2);
+    ctx.fillStyle = '#2d3748';
+    ctx.font = '12px JetBrains Mono';
+    ctx.fillText('Create sessions to see the network', canvas.width / 2, canvas.height / 2 + 25);
+}
+
+function animateGraph(ctx, canvas) {
+    const nodes = historyNodes;
+    const edges = historyEdges;
+
+    // Force-directed simulation
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+
+    // Apply forces
+    nodes.forEach((node, i) => {
+        // Center gravity
+        node.vx += (centerX - node.x) * 0.0005;
+        node.vy += (centerY - node.y) * 0.0005;
+
+        // Repulsion between nodes
+        nodes.forEach((other, j) => {
+            if (i === j) return;
+            const dx = node.x - other.x;
+            const dy = node.y - other.y;
+            const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+            const force = 1000 / (dist * dist);
+            node.vx += (dx / dist) * force;
+            node.vy += (dy / dist) * force;
+        });
+    });
+
+    // Attraction for connected nodes
+    edges.forEach(edge => {
+        const source = nodes[edge.source];
+        const target = nodes[edge.target];
+        const dx = target.x - source.x;
+        const dy = target.y - source.y;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        const force = (dist - 100) * 0.01 * edge.strength;
+
+        source.vx += (dx / dist) * force;
+        source.vy += (dy / dist) * force;
+        target.vx -= (dx / dist) * force;
+        target.vy -= (dy / dist) * force;
+    });
+
+    // Update positions with damping
+    nodes.forEach(node => {
+        node.vx *= 0.9;
+        node.vy *= 0.9;
+        node.x += node.vx;
+        node.y += node.vy;
+
+        // Keep in bounds
+        node.x = Math.max(node.radius, Math.min(canvas.width - node.radius, node.x));
+        node.y = Math.max(node.radius, Math.min(canvas.height - node.radius, node.y));
+    });
+
+    // Clear canvas completely (no trailing effect)
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Draw edges (neural network synapses)
+    edges.forEach(edge => {
+        const source = nodes[edge.source];
+        const target = nodes[edge.target];
+
+        // Create gradient along the edge for neural network effect
+        const gradient = ctx.createLinearGradient(source.x, source.y, target.x, target.y);
+        const alpha = 0.15 + edge.strength * 0.15;
+        gradient.addColorStop(0, `rgba(0, 255, 213, ${alpha})`);
+        gradient.addColorStop(0.5, `rgba(0, 255, 213, ${alpha * 1.5})`);
+        gradient.addColorStop(1, `rgba(0, 255, 213, ${alpha})`);
+
+        ctx.strokeStyle = gradient;
+        ctx.lineWidth = 1 + edge.strength * 0.5;
+        ctx.beginPath();
+        ctx.moveTo(source.x, source.y);
+        ctx.lineTo(target.x, target.y);
+        ctx.stroke();
+
+        // Draw small dots along connection for neural network look
+        const midX = (source.x + target.x) / 2;
+        const midY = (source.y + target.y) / 2;
+        ctx.fillStyle = `rgba(0, 255, 213, ${alpha})`;
+        ctx.beginPath();
+        ctx.arc(midX, midY, 2, 0, Math.PI * 2);
+        ctx.fill();
+    });
+
+    // Draw nodes (neurons) - 3D spheres
+    nodes.forEach(node => {
+        const isHovered = hoveredNode === node;
+        const r = node.radius;
+
+        // Draw outer glow
+        const glowRadius = isHovered ? r * 3 : r * 2;
+        const glowGradient = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, glowRadius);
+        glowGradient.addColorStop(0, isHovered ? 'rgba(0, 255, 213, 0.5)' : 'rgba(0, 255, 213, 0.3)');
+        glowGradient.addColorStop(1, 'transparent');
+        ctx.fillStyle = glowGradient;
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, glowRadius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Draw sphere with 3D gradient (dark at bottom, light at top)
+        const sphereGradient = ctx.createRadialGradient(
+            node.x - r * 0.3, node.y - r * 0.3, 0,
+            node.x, node.y, r * 1.2
+        );
+        sphereGradient.addColorStop(0, '#7fffef');      // Bright highlight
+        sphereGradient.addColorStop(0.2, '#00ffd5');    // Main cyan
+        sphereGradient.addColorStop(0.6, '#00c4a7');    // Mid tone
+        sphereGradient.addColorStop(1, '#006b5a');      // Dark shadow
+
+        ctx.fillStyle = sphereGradient;
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Draw border
+        ctx.strokeStyle = isHovered ? '#fff' : 'rgba(0, 255, 213, 0.8)';
+        ctx.lineWidth = isHovered ? 2 : 1;
+        ctx.stroke();
+
+        // Draw specular highlight (small bright spot)
+        const specGradient = ctx.createRadialGradient(
+            node.x - r * 0.4, node.y - r * 0.4, 0,
+            node.x - r * 0.4, node.y - r * 0.4, r * 0.5
+        );
+        specGradient.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
+        specGradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.2)');
+        specGradient.addColorStop(1, 'transparent');
+        ctx.fillStyle = specGradient;
+        ctx.beginPath();
+        ctx.arc(node.x - r * 0.3, node.y - r * 0.3, r * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Draw label
+        ctx.fillStyle = '#fff';
+        ctx.font = '10px JetBrains Mono';
+        ctx.textAlign = 'center';
+        const label = node.title.length > 12 ? node.title.slice(0, 12) + '...' : node.title;
+        ctx.fillText(label, node.x, node.y + node.radius + 15);
+    });
+
+    // Draw tooltip for hovered node
+    if (hoveredNode) {
+        const node = hoveredNode;
+        const tooltipX = node.x + node.radius + 15;
+        const tooltipY = node.y - 10;
+
+        // Tooltip background
+        const tags = node.keywords.slice(0, 5);
+        const tooltipWidth = 150;
+        const tooltipHeight = 20 + tags.length * 16;
+
+        ctx.fillStyle = 'rgba(10, 10, 20, 0.95)';
+        ctx.strokeStyle = '#00ffd5';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(tooltipX, tooltipY, tooltipWidth, tooltipHeight, 4);
+        ctx.fill();
+        ctx.stroke();
+
+        // Tooltip title
+        ctx.fillStyle = '#00ffd5';
+        ctx.font = 'bold 11px JetBrains Mono';
+        ctx.textAlign = 'left';
+        ctx.fillText('// TAGS', tooltipX + 8, tooltipY + 14);
+
+        // Tooltip tags
+        ctx.fillStyle = '#aaa';
+        ctx.font = '10px JetBrains Mono';
+        tags.forEach((tag, i) => {
+            ctx.fillText(`• ${tag}`, tooltipX + 8, tooltipY + 30 + i * 16);
+        });
+
+        if (tags.length === 0) {
+            ctx.fillStyle = '#666';
+            ctx.fillText('No tags extracted', tooltipX + 8, tooltipY + 30);
+        }
+    }
+
+    historyAnimationId = requestAnimationFrame(() => animateGraph(ctx, canvas));
+}
+
+// Handle canvas click to select conversation
+document.getElementById('history-canvas')?.addEventListener('click', (e) => {
+    const canvas = e.target;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    // Check if clicked on a node
+    for (const node of historyNodes) {
+        const dx = x - node.x;
+        const dy = y - node.y;
+        if (dx * dx + dy * dy < node.radius * node.radius) {
+            // Switch to chat tab and select this conversation
+            switchTab('chat');
+            selectConversation(node.id);
+            break;
+        }
+    }
+});
+
+// Handle canvas hover to show tags
+document.getElementById('history-canvas')?.addEventListener('mousemove', (e) => {
+    const canvas = e.target;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    // Check if hovering over a node
+    hoveredNode = null;
+    for (const node of historyNodes) {
+        const dx = x - node.x;
+        const dy = y - node.y;
+        if (dx * dx + dy * dy < node.radius * node.radius) {
+            hoveredNode = node;
+            canvas.style.cursor = 'pointer';
+            break;
+        }
+    }
+    if (!hoveredNode) {
+        canvas.style.cursor = 'default';
+    }
+});
+
+// Clear hover when leaving canvas
+document.getElementById('history-canvas')?.addEventListener('mouseleave', () => {
+    hoveredNode = null;
+});
+
+// Handle window resize for history canvas
+window.addEventListener('resize', () => {
+    const canvas = document.getElementById('history-canvas');
+    if (canvas && document.getElementById('tab-history').classList.contains('active')) {
+        initHistoryVisualization();
     }
 });

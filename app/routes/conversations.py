@@ -6,11 +6,19 @@ from sqlalchemy.orm import selectinload
 import json
 import asyncio
 
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+
 from app.database import get_db
 from app.models import Conversation, Message
 from app.schemas import ConversationCreate, ConversationResponse, MessageResponse, RunConversationRequest
-from app.providers import AnthropicProvider, GroqProvider, OpenAIProvider, XAIProvider
+from app.providers import (
+    AnthropicProvider, GroqProvider, OpenAIProvider, XAIProvider,
+    KimiProvider, GeminiProvider
+)
 from app.providers.base import ChatMessage
+
+limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter(prefix="/api/conversations", tags=["conversations"])
 
@@ -21,6 +29,8 @@ def get_provider(
     groq_key: str | None = None,
     openai_key: str | None = None,
     xai_key: str | None = None,
+    kimi_key: str | None = None,
+    gemini_key: str | None = None,
 ):
     """Get the appropriate provider for a model, with optional user-provided keys."""
     # Create providers with user keys if provided
@@ -28,11 +38,15 @@ def get_provider(
     groq_provider = GroqProvider(api_key=groq_key)
     openai_provider = OpenAIProvider(api_key=openai_key)
     xai_provider = XAIProvider(api_key=xai_key)
+    kimi_provider = KimiProvider(api_key=kimi_key)
+    gemini_provider = GeminiProvider(api_key=gemini_key)
 
     anthropic_models = [m.id for m in anthropic_provider.get_available_models()]
     groq_models = [m.id for m in groq_provider.get_available_models()]
     openai_models = [m.id for m in openai_provider.get_available_models()]
     xai_models = [m.id for m in xai_provider.get_available_models()]
+    kimi_models = [m.id for m in kimi_provider.get_available_models()]
+    gemini_models = [m.id for m in gemini_provider.get_available_models()]
 
     if model_id in anthropic_models:
         return anthropic_provider
@@ -42,6 +56,10 @@ def get_provider(
         return openai_provider
     elif model_id in xai_models:
         return xai_provider
+    elif model_id in kimi_models:
+        return kimi_provider
+    elif model_id in gemini_models:
+        return gemini_provider
     else:
         raise ValueError(f"Unknown model: {model_id}")
 
@@ -55,7 +73,9 @@ async def list_conversations(db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/", response_model=ConversationResponse)
+@limiter.limit("30/minute")
 async def create_conversation(
+    request: Request,
     data: ConversationCreate,
     db: AsyncSession = Depends(get_db)
 ):
@@ -95,7 +115,8 @@ async def get_messages(conversation_id: int, db: AsyncSession = Depends(get_db))
 
 
 @router.delete("/{conversation_id}")
-async def delete_conversation(conversation_id: int, db: AsyncSession = Depends(get_db)):
+@limiter.limit("20/minute")
+async def delete_conversation(request: Request, conversation_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(Conversation).where(Conversation.id == conversation_id)
     )
@@ -109,6 +130,7 @@ async def delete_conversation(conversation_id: int, db: AsyncSession = Depends(g
 
 
 @router.post("/{conversation_id}/run")
+@limiter.limit("10/minute")
 async def run_conversation(
     conversation_id: int,
     request: RunConversationRequest,
@@ -121,6 +143,8 @@ async def run_conversation(
     groq_key = http_request.headers.get('X-Groq-Key')
     openai_key = http_request.headers.get('X-OpenAI-Key')
     xai_key = http_request.headers.get('X-XAI-Key')
+    kimi_key = http_request.headers.get('X-Kimi-Key')
+    gemini_key = http_request.headers.get('X-Gemini-Key')
 
     result = await db.execute(
         select(Conversation)
@@ -151,14 +175,14 @@ async def run_conversation(
 
         # Get providers with user-provided keys
         try:
-            provider_a = get_provider(conversation.model_a, anthropic_key, groq_key, openai_key, xai_key)
+            provider_a = get_provider(conversation.model_a, anthropic_key, groq_key, openai_key, xai_key, kimi_key, gemini_key)
         except ValueError as e:
             yield json.dumps({"type": "error", "error": f"Model A error: {str(e)}"}) + "\n"
             yield json.dumps({"type": "done"}) + "\n"
             return
 
         try:
-            provider_b = get_provider(conversation.model_b, anthropic_key, groq_key, openai_key, xai_key)
+            provider_b = get_provider(conversation.model_b, anthropic_key, groq_key, openai_key, xai_key, kimi_key, gemini_key)
         except ValueError as e:
             yield json.dumps({"type": "error", "error": f"Model B error: {str(e)}"}) + "\n"
             yield json.dumps({"type": "done"}) + "\n"

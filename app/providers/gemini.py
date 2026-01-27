@@ -1,0 +1,118 @@
+from typing import AsyncGenerator
+import google.generativeai as genai
+from app.providers.base import BaseProvider, ModelInfo, ChatMessage, ChatResponse
+from app.config import get_settings
+
+
+class GeminiProvider(BaseProvider):
+    """Google Gemini provider."""
+
+    def __init__(self, api_key: str | None = None):
+        settings = get_settings()
+        self.api_key = api_key or settings.gemini_api_key
+        if self.api_key:
+            genai.configure(api_key=self.api_key)
+            self.configured = True
+        else:
+            self.configured = False
+
+    def get_available_models(self) -> list[ModelInfo]:
+        return [
+            ModelInfo(
+                id="gemini-2.0-flash",
+                name="Gemini 2.0 Flash",
+                provider="gemini",
+                description="Latest, fastest Gemini model",
+            ),
+            ModelInfo(
+                id="gemini-1.5-pro",
+                name="Gemini 1.5 Pro",
+                provider="gemini",
+                description="Most capable, 1M context",
+            ),
+            ModelInfo(
+                id="gemini-1.5-flash",
+                name="Gemini 1.5 Flash",
+                provider="gemini",
+                description="Fast and efficient",
+            ),
+        ]
+
+    async def chat(
+        self,
+        messages: list[ChatMessage],
+        model: str,
+        system_prompt: str | None = None,
+    ) -> ChatResponse:
+        if not self.configured:
+            raise ValueError("Gemini API key not configured")
+
+        gemini_model = genai.GenerativeModel(
+            model_name=model,
+            system_instruction=system_prompt if system_prompt else None,
+        )
+
+        # Build conversation history for Gemini format
+        history = []
+        for msg in messages[:-1]:
+            role = "user" if msg.role == "user" else "model"
+            history.append({"role": role, "parts": [msg.content]})
+
+        chat = gemini_model.start_chat(history=history)
+
+        # Send last message
+        last_message = messages[-1].content if messages else ""
+        response = await chat.send_message_async(
+            last_message,
+            generation_config=genai.GenerationConfig(max_output_tokens=4096)
+        )
+
+        # Extract token counts if available
+        input_tokens = None
+        output_tokens = None
+        if hasattr(response, 'usage_metadata') and response.usage_metadata:
+            input_tokens = getattr(response.usage_metadata, 'prompt_token_count', None)
+            output_tokens = getattr(response.usage_metadata, 'candidates_token_count', None)
+
+        return ChatResponse(
+            content=response.text,
+            model=model,
+            raw_response={"text": response.text},
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+        )
+
+    async def stream_chat(
+        self,
+        messages: list[ChatMessage],
+        model: str,
+        system_prompt: str | None = None,
+    ) -> AsyncGenerator[str, None]:
+        if not self.configured:
+            raise ValueError("Gemini API key not configured")
+
+        gemini_model = genai.GenerativeModel(
+            model_name=model,
+            system_instruction=system_prompt if system_prompt else None,
+        )
+
+        history = []
+        for msg in messages[:-1]:
+            role = "user" if msg.role == "user" else "model"
+            history.append({"role": role, "parts": [msg.content]})
+
+        chat = gemini_model.start_chat(history=history)
+        last_message = messages[-1].content if messages else ""
+
+        response = await chat.send_message_async(
+            last_message,
+            generation_config=genai.GenerationConfig(max_output_tokens=4096),
+            stream=True
+        )
+
+        async for chunk in response:
+            if chunk.text:
+                yield chunk.text
+
+    def is_configured(self) -> bool:
+        return self.configured
