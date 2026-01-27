@@ -146,6 +146,8 @@ async def run_conversation(
     kimi_key = http_request.headers.get('X-Kimi-Key')
     gemini_key = http_request.headers.get('X-Gemini-Key')
 
+    # Load conversation data before entering the generator
+    # (db session will close after this function returns)
     result = await db.execute(
         select(Conversation)
         .options(selectinload(Conversation.messages))
@@ -155,74 +157,88 @@ async def run_conversation(
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
 
+    # Copy data we need for the generator (before session closes)
+    conv_id = conversation.id
+    model_a = conversation.model_a
+    model_b = conversation.model_b
+    system_prompt_a = conversation.system_prompt_a
+    system_prompt_b = conversation.system_prompt_b
+    starter_message = conversation.starter_message
+    existing_messages = [(msg.role, msg.content) for msg in conversation.messages]
+
     async def generate():
+        # Import here to create new session inside generator
+        from app.database import async_session
+
         # Get existing messages or start fresh
         messages_a = []  # Messages from model A's perspective
         messages_b = []  # Messages from model B's perspective
 
-        # Load existing messages
-        for msg in conversation.messages:
-            if msg.role == "model_a":
-                messages_a.append(ChatMessage(role="assistant", content=msg.content))
-                messages_b.append(ChatMessage(role="user", content=msg.content))
+        # Load existing messages from copied data
+        for msg_role, msg_content in existing_messages:
+            if msg_role == "model_a":
+                messages_a.append(ChatMessage(role="assistant", content=msg_content))
+                messages_b.append(ChatMessage(role="user", content=msg_content))
             else:
-                messages_a.append(ChatMessage(role="user", content=msg.content))
-                messages_b.append(ChatMessage(role="assistant", content=msg.content))
+                messages_a.append(ChatMessage(role="user", content=msg_content))
+                messages_b.append(ChatMessage(role="assistant", content=msg_content))
 
         # If no messages yet, seed with starter
         if not messages_a:
-            messages_b.append(ChatMessage(role="user", content=conversation.starter_message))
+            messages_b.append(ChatMessage(role="user", content=starter_message))
 
         # Get providers with user-provided keys
         try:
-            provider_a = get_provider(conversation.model_a, anthropic_key, groq_key, openai_key, xai_key, kimi_key, gemini_key)
+            provider_a = get_provider(model_a, anthropic_key, groq_key, openai_key, xai_key, kimi_key, gemini_key)
         except ValueError as e:
             yield json.dumps({"type": "error", "error": f"Model A error: {str(e)}"}) + "\n"
             yield json.dumps({"type": "done"}) + "\n"
             return
 
         try:
-            provider_b = get_provider(conversation.model_b, anthropic_key, groq_key, openai_key, xai_key, kimi_key, gemini_key)
+            provider_b = get_provider(model_b, anthropic_key, groq_key, openai_key, xai_key, kimi_key, gemini_key)
         except ValueError as e:
             yield json.dumps({"type": "error", "error": f"Model B error: {str(e)}"}) + "\n"
             yield json.dumps({"type": "done"}) + "\n"
             return
 
-        current_turn = "b" if not conversation.messages else "a"
+        current_turn = "b" if not existing_messages else "a"
 
         for turn in range(request.turns):
             if current_turn == "b":
                 # Model B responds
                 provider = provider_b
-                model = conversation.model_b
-                system = conversation.system_prompt_b
+                current_model = model_b
+                system = system_prompt_b
                 messages = messages_b
                 role = "model_b"
             else:
                 # Model A responds
                 provider = provider_a
-                model = conversation.model_a
-                system = conversation.system_prompt_a
+                current_model = model_a
+                system = system_prompt_a
                 messages = messages_a
                 role = "model_a"
 
-            yield json.dumps({"type": "start", "role": role, "model": model}) + "\n"
+            yield json.dumps({"type": "start", "role": role, "model": current_model}) + "\n"
 
             try:
-                response = await provider.chat(messages, model, system)
+                response = await provider.chat(messages, current_model, system)
                 content = response.content
+                token_count = (response.input_tokens or 0) + (response.output_tokens or 0)
 
-                # Save to database
-                new_message = Message(
-                    conversation_id=conversation_id,
-                    role=role,
-                    model_name=model,
-                    content=content,
-                    raw_response=response.raw_response,
-                    token_count=(response.input_tokens or 0) + (response.output_tokens or 0),
-                )
-                db.add(new_message)
-                await db.commit()
+                # Save to database with new session
+                async with async_session() as session:
+                    new_message = Message(
+                        conversation_id=conv_id,
+                        role=role,
+                        model_name=current_model,
+                        content=content,
+                        raw_response=response.raw_response,
+                        token_count=token_count,
+                    )
+                    session.add(new_message)
+                    await session.commit()
 
                 # Update message histories
                 if role == "model_a":
@@ -235,9 +251,9 @@ async def run_conversation(
                 yield json.dumps({
                     "type": "message",
                     "role": role,
-                    "model": model,
+                    "model": current_model,
                     "content": content,
-                    "tokens": new_message.token_count,
+                    "tokens": token_count,
                 }) + "\n"
 
             except Exception as e:

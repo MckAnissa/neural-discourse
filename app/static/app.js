@@ -548,6 +548,23 @@ async function runConversation() {
             body: JSON.stringify({ conversation_id: currentConversationId, turns })
         });
 
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('API Error:', response.status, errorText);
+            const container = document.getElementById('messages-container');
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'message message-model-a';
+            errorDiv.innerHTML = `
+                <div class="message-header">
+                    <span class="message-model">${createAvatarHTML()}System</span>
+                    <span class="message-tokens">error</span>
+                </div>
+                <div class="message-content" style="color: var(--purple-primary);">⚠ API Error ${response.status}: ${escapeHtml(errorText)}</div>
+            `;
+            container.appendChild(errorDiv);
+            return;
+        }
+
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         const container = document.getElementById('messages-container');
