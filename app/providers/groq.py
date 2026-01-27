@@ -29,10 +29,10 @@ class GroqProvider(BaseProvider):
                 description="Fast and lightweight",
             ),
             ModelInfo(
-                id="llama3-70b-8192",
-                name="Llama 3 70B",
+                id="mixtral-8x7b-32768",
+                name="Mixtral 8x7B",
                 provider="groq",
-                description="Powerful open model",
+                description="Mistral's MoE model, 32K context",
             ),
             ModelInfo(
                 id="gemma2-9b-it",

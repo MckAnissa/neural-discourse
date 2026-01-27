@@ -1248,10 +1248,10 @@ body {
 /* Mobile Config Bar */
 .mobile-config {
     display: none;
-    padding: 0.5rem;
+    padding: 0.35rem 0.5rem;
     background: var(--bg-secondary);
     border-bottom: 1px solid var(--border-color);
-    gap: 0.5rem;
+    gap: 0.4rem;
     justify-content: center;
 }
 
@@ -1262,12 +1262,12 @@ body {
 }
 
 .mobile-btn {
-    padding: 0.5rem 1rem;
+    padding: 0.3rem 0.75rem;
     background: var(--bg-tertiary);
     border: 1px solid var(--cyan-dim);
     color: var(--cyan-primary);
     font-family: var(--font-mono);
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     cursor: pointer;
     transition: all 0.3s ease;
 }
@@ -1388,6 +1388,30 @@ body {
 .info-text.version {
     color: var(--text-dim);
     font-size: 0.7rem;
+}
+
+.info-list {
+    margin: 0.75rem 0;
+    padding-left: 1.5rem;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    line-height: 1.8;
+}
+
+.info-list li {
+    margin-bottom: 0.25rem;
+}
+
+.info-link {
+    color: var(--cyan-primary);
+    text-decoration: none;
+    border-bottom: 1px solid var(--cyan-dim);
+    transition: all 0.3s ease;
+}
+
+.info-link:hover {
+    color: var(--green-primary);
+    border-color: var(--green-primary);
 }
 
 .info-steps {
