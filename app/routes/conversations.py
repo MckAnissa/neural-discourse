@@ -133,18 +133,18 @@ async def delete_conversation(request: Request, conversation_id: int, db: AsyncS
 @limiter.limit("10/minute")
 async def run_conversation(
     conversation_id: int,
-    request: RunConversationRequest,
-    http_request: Request,
+    run_request: RunConversationRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db)
 ):
     """Run the conversation for N turns, streaming results."""
     # Get user-provided API keys from headers
-    anthropic_key = http_request.headers.get('X-Anthropic-Key')
-    groq_key = http_request.headers.get('X-Groq-Key')
-    openai_key = http_request.headers.get('X-OpenAI-Key')
-    xai_key = http_request.headers.get('X-XAI-Key')
-    kimi_key = http_request.headers.get('X-Kimi-Key')
-    gemini_key = http_request.headers.get('X-Gemini-Key')
+    anthropic_key = request.headers.get('X-Anthropic-Key')
+    groq_key = request.headers.get('X-Groq-Key')
+    openai_key = request.headers.get('X-OpenAI-Key')
+    xai_key = request.headers.get('X-XAI-Key')
+    kimi_key = request.headers.get('X-Kimi-Key')
+    gemini_key = request.headers.get('X-Gemini-Key')
 
     # Load conversation data before entering the generator
     # (db session will close after this function returns)
@@ -204,7 +204,7 @@ async def run_conversation(
 
         current_turn = "b" if not existing_messages else "a"
 
-        for turn in range(request.turns):
+        for turn in range(run_request.turns):
             if current_turn == "b":
                 # Model B responds
                 provider = provider_b

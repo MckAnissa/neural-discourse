@@ -386,7 +386,7 @@ body {
     flex-direction: column;
     overflow: hidden;
     position: relative;
-    box-shadow: 0 0 20px rgba(191, 122, 240, 0.2);
+    box-shadow: 0 0 20px rgba(191, 122, 240, 0.3), 0 0 40px rgba(191, 122, 240, 0.15);
     margin-right: 10px;
     min-height: 0;
     max-height: 100%;
@@ -541,7 +541,7 @@ body {
     background: var(--bg-primary);
     position: relative;
     border: 1px solid var(--green-dim);
-    box-shadow: 0 0 20px rgba(0, 255, 157, 0.15);
+    box-shadow: 0 0 20px rgba(0, 255, 157, 0.3), 0 0 40px rgba(0, 255, 157, 0.15);
     margin-right: 10px;
     min-height: 0;
     max-height: 100%;
@@ -806,7 +806,7 @@ body {
     padding: 1rem;
     overflow-y: auto;
     position: relative;
-    box-shadow: var(--cyan-bloom);
+    box-shadow: 0 0 20px rgba(0, 255, 213, 0.3), 0 0 40px rgba(0, 255, 213, 0.15);
     min-height: 0;
     max-height: 100%;
     transition: box-shadow 0.3s ease;
