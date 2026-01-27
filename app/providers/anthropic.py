@@ -17,22 +17,22 @@ class AnthropicProvider(BaseProvider):
     def get_available_models(self) -> list[ModelInfo]:
         return [
             ModelInfo(
+                id="claude-opus-4-5-20251101",
+                name="Claude Opus 4.5",
+                provider="anthropic",
+                description="Most capable, best for complex tasks",
+            ),
+            ModelInfo(
                 id="claude-sonnet-4-20250514",
                 name="Claude Sonnet 4",
                 provider="anthropic",
-                description="Latest Sonnet, best balance",
+                description="Best balance of speed and capability",
             ),
             ModelInfo(
-                id="claude-3-5-haiku-latest",
+                id="claude-3-5-haiku-20241022",
                 name="Claude 3.5 Haiku",
                 provider="anthropic",
                 description="Fastest, most cost-effective",
-            ),
-            ModelInfo(
-                id="claude-3-opus-latest",
-                name="Claude 3 Opus",
-                provider="anthropic",
-                description="Most capable for complex tasks",
             ),
         ]
 

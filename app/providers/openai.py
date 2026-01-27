@@ -29,10 +29,16 @@ class OpenAIProvider(BaseProvider):
                 description="Fast and affordable",
             ),
             ModelInfo(
-                id="gpt-3.5-turbo",
-                name="GPT-3.5 Turbo",
+                id="o1",
+                name="o1",
                 provider="openai",
-                description="Fast and cost-effective",
+                description="Advanced reasoning model",
+            ),
+            ModelInfo(
+                id="o1-mini",
+                name="o1 Mini",
+                provider="openai",
+                description="Fast reasoning model",
             ),
         ]
 
