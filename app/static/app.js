@@ -725,9 +725,15 @@ async function exportConversation() {
 
     try {
         const [convResponse, messagesResponse] = await Promise.all([
-            fetch(`/api/conversations/${currentConversationId}`),
-            fetch(`/api/conversations/${currentConversationId}/messages`)
+            fetch(`/api/conversations/${currentConversationId}`, { headers: getApiHeaders() }),
+            fetch(`/api/conversations/${currentConversationId}/messages`, { headers: getApiHeaders() })
         ]);
+
+        if (!convResponse.ok || !messagesResponse.ok) {
+            console.error('Export fetch failed:', convResponse.status, messagesResponse.status);
+            alert('Export failed - could not fetch conversation data');
+            return;
+        }
 
         const conversation = await convResponse.json();
         const messages = await messagesResponse.json();
@@ -739,22 +745,29 @@ async function exportConversation() {
                 exported_at: new Date().toISOString()
             },
             session: conversation,
-            messages,
+            messages: messages || [],
             stats: {
-                total_messages: messages.length,
-                total_tokens: messages.reduce((sum, m) => sum + (m.token_count || 0), 0)
+                total_messages: (messages || []).length,
+                total_tokens: (messages || []).reduce((sum, m) => sum + (m.token_count || 0), 0)
             }
         };
 
-        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+        const jsonString = JSON.stringify(exportData, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
         a.download = `neural-discourse_${conversation.id}_${Date.now()}.json`;
+        a.style.display = 'none';
+        document.body.appendChild(a);
         a.click();
-        URL.revokeObjectURL(url);
+        setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 100);
     } catch (error) {
         console.error('Export failed:', error);
+        alert('Export failed: ' + error.message);
     }
 }
 
