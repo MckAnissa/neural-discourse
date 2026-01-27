@@ -396,6 +396,9 @@ async function loadConversations() {
 async function selectConversation(id) {
     currentConversationId = id;
 
+    // Close mobile drawer if open
+    closeMobileSessions();
+
     // Update UI - highlight selected conversation
     document.querySelectorAll('.conversation-item').forEach(item => {
         item.classList.toggle('active', parseInt(item.dataset.id) === id);
@@ -755,8 +758,24 @@ async function exportConversation() {
     }
 }
 
+// Mobile Sessions Drawer
+function toggleMobileSessions() {
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.getElementById('mobile-overlay');
+    sidebar.classList.toggle('mobile-open');
+    overlay.classList.toggle('active');
+}
+
+function closeMobileSessions() {
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.getElementById('mobile-overlay');
+    sidebar.classList.remove('mobile-open');
+    overlay.classList.remove('active');
+}
+
 // Modal controls
 function openNewConversationModal() {
+    closeMobileSessions(); // Close mobile drawer if open
     document.getElementById('new-conversation-modal').classList.add('active');
 }
 

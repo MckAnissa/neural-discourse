@@ -65,6 +65,9 @@
 
     <!-- Tab Content: Chat (Default) -->
     <div class="tab-content active" id="tab-chat">
+    <!-- Mobile Overlay -->
+    <div class="mobile-overlay" id="mobile-overlay" onclick="closeMobileSessions()"></div>
+
     <main class="main-container">
         <!-- Sidebar: Conversations -->
         <aside class="sidebar">
@@ -78,6 +81,13 @@
                 <!-- Populated by JS -->
             </div>
         </aside>
+
+        <!-- Mobile Config Bar (visible only on mobile) -->
+        <div class="mobile-config" id="mobile-config">
+            <button class="mobile-btn" onclick="toggleMobileSessions()">☰ Sessions</button>
+            <button class="mobile-btn" onclick="openNewConversationModal()">+ New</button>
+            <button class="mobile-btn" onclick="openSettingsModal()">⚙ Keys</button>
+        </div>
 
         <!-- Main Chat Area -->
         <section class="chat-container">
