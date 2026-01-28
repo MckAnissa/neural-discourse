@@ -11,7 +11,7 @@ from slowapi.util import get_remote_address
 
 from app.database import get_db
 from app.models import Conversation, Message
-from app.schemas import ConversationCreate, ConversationResponse, MessageResponse, RunConversationRequest
+from app.schemas import ConversationCreate, ConversationResponse, MessageResponse, RunConversationRequest, UserMessageInject
 from app.providers import (
     AnthropicProvider, GroqProvider, OpenAIProvider, XAIProvider,
     KimiProvider, GeminiProvider
@@ -225,10 +225,19 @@ async def run_conversation(
                 messages = messages_a
                 role = "model_a"
 
+            # Add context note for first turn
+            enhanced_system = system
+            if turn == 0 and not existing_messages:
+                context_note = "Note: The first message in this conversation was written by a human to seed the discussion. All subsequent messages are from AI models engaging in discourse."
+                if enhanced_system:
+                    enhanced_system = f"{context_note}\n\n{enhanced_system}"
+                else:
+                    enhanced_system = context_note
+
             yield json.dumps({"type": "start", "role": role, "model": current_model}) + "\n"
 
             try:
-                response = await provider.chat(messages, current_model, system)
+                response = await provider.chat(messages, current_model, enhanced_system)
                 content = response.content
                 token_count = (response.input_tokens or 0) + (response.output_tokens or 0)
 
@@ -271,3 +280,45 @@ async def run_conversation(
         yield json.dumps({"type": "done"}) + "\n"
 
     return StreamingResponse(generate(), media_type="application/x-ndjson")
+
+
+@router.post("/{conversation_id}/inject-message")
+@limiter.limit("30/minute")
+async def inject_user_message(
+    conversation_id: int,
+    message_data: UserMessageInject,
+    request: Request,
+    db: AsyncSession = Depends(get_db)
+):
+    """Inject a user message into the conversation."""
+    # Verify conversation exists
+    result = await db.execute(
+        select(Conversation).where(Conversation.id == conversation_id)
+    )
+    conversation = result.scalar_one_or_none()
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    # Determine the role for the message
+    # user_to_a means the message appears as if model A said it (so model B sees it as user input)
+    # user_to_b means the message appears as if model B said it (so model A sees it as user input)
+    if message_data.role == "user_to_a":
+        role = "model_a"
+    else:
+        role = "model_b"
+
+    # Create the message
+    new_message = Message(
+        conversation_id=conversation_id,
+        role=role,
+        model_name="human",  # Mark as human-injected
+        content=message_data.content,
+        raw_response={"injected": True},
+        token_count=0,
+    )
+
+    db.add(new_message)
+    await db.commit()
+    await db.refresh(new_message)
+
+    return MessageResponse.model_validate(new_message)

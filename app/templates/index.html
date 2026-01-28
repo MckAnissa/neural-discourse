@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Neural Discourse // AI Conversation Framework</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -94,7 +95,7 @@
             <div class="chat-header" id="chat-header" style="display: none;">
                 <div class="chat-title" id="chat-title">Select a conversation</div>
                 <div class="chat-actions">
-                    <button class="btn" onclick="exportConversation()">↓ Export</button>
+                    <button class="btn" onclick="openExportModal()">↓ Export</button>
                     <button class="btn" onclick="deleteCurrentConversation()">✕ Delete</button>
                     <button class="btn" onclick="clearSelection()">← Close</button>
                 </div>
@@ -116,6 +117,9 @@
                 <button class="btn btn-primary" id="run-btn" onclick="runConversation()">
                     ⬡ Execute
                 </button>
+                <button class="btn" onclick="openInjectModal()">
+                    + Inject
+                </button>
                 <div class="loading" id="loading" style="display: none;">
                     <span>Processing</span>
                     <div class="loading-dots">
@@ -130,7 +134,10 @@
         <!-- Settings Panel -->
         <aside class="settings-panel" id="settings-panel" style="display: none;">
             <div class="settings-section">
-                <div class="settings-title">Config</div>
+                <div class="settings-title">
+                    Config
+                    <button class="panel-close-btn" onclick="closeSettingsPanel()" title="Close">✕</button>
+                </div>
 
                 <div class="form-group">
                     <label class="form-label">Model A</label>
@@ -224,9 +231,10 @@
                     Want to try Neural Discourse for free? <strong>Groq</strong> offers free API access to open-source models:
                 </p>
                 <ul class="info-list">
+                    <li><strong>GPT-OSS 120B</strong> - Large open-source model</li>
                     <li><strong>Llama 3.3 70B</strong> - Meta's latest, very capable</li>
-                    <li><strong>Mixtral 8x7B</strong> - Mistral's mixture-of-experts model</li>
-                    <li><strong>Gemma 2 9B</strong> - Google's efficient open model</li>
+                    <li><strong>Mistral Saba 24B</strong> - Multilingual model</li>
+                    <li><strong>Llama 3.1 8B</strong> - Fast and efficient</li>
                 </ul>
                 <p class="info-text">
                     Get your free API key at <a href="https://console.groq.com/" target="_blank" class="info-link">console.groq.com</a>,
@@ -297,7 +305,7 @@
                 <div class="tech-list">
                     <span class="tech-item">Anthropic Claude</span>
                     <span class="tech-item">OpenAI GPT</span>
-                    <span class="tech-item">Groq (Llama/Gemma)</span>
+                    <span class="tech-item">Groq (Llama/Mistral/GPT-OSS)</span>
                     <span class="tech-item">xAI Grok</span>
                     <span class="tech-item">Moonshot Kimi</span>
                     <span class="tech-item">Google Gemini</span>
@@ -346,6 +354,19 @@
                 <div class="form-group">
                     <label class="form-label">Model B System</label>
                     <textarea class="form-textarea" id="new-system-b" placeholder="// optional instructions"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Model C (Optional - 3-way)</label>
+                    <select class="form-select" id="new-model-c">
+                        <option value="">None - 2-way conversation</option>
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Model C System</label>
+                    <textarea class="form-textarea" id="new-system-c" placeholder="// optional instructions"></textarea>
                 </div>
 
                 <div class="form-group">
@@ -458,6 +479,58 @@
             <div class="modal-footer">
                 <button class="btn" onclick="clearApiKeys()">Clear Keys</button>
                 <button class="btn btn-primary" onclick="saveApiKeys()">⬡ Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Inject Message Modal -->
+    <div class="modal-overlay" id="inject-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">Inject User Message</h2>
+                <button class="modal-close" onclick="closeInjectModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Message Content</label>
+                    <textarea class="form-textarea" id="inject-content" placeholder="Your message to inject into the conversation..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Direct To</label>
+                    <select class="form-select" id="inject-target">
+                        <option value="user_to_a">Model A (B will respond)</option>
+                        <option value="user_to_b">Model B (A will respond)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeInjectModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="injectMessage()">⬡ Inject</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Modal -->
+    <div class="modal-overlay" id="export-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">Export Conversation</h2>
+                <button class="modal-close" onclick="closeExportModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Export Format</label>
+                    <select class="form-select" id="export-format">
+                        <option value="json">JSON - Full data with metadata</option>
+                        <option value="txt">TXT - Plain text transcript</option>
+                        <option value="md">Markdown - Formatted for reading</option>
+                        <option value="csv">CSV - Spreadsheet compatible</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeExportModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="exportConversation()">⬡ Export</button>
             </div>
         </div>
     </div>

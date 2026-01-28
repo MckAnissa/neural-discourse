@@ -299,13 +299,18 @@ async function loadProviders() {
 }
 
 function populateModelSelects() {
-    const selects = ['new-model-a', 'new-model-b', 'edit-model-a', 'edit-model-b'];
+    const selects = ['new-model-a', 'new-model-b', 'new-model-c', 'edit-model-a', 'edit-model-b'];
 
     selects.forEach(selectId => {
         const select = document.getElementById(selectId);
         if (!select) return;
 
-        select.innerHTML = '';
+        // For model-c, keep the "None" option
+        if (selectId === 'new-model-c') {
+            select.innerHTML = '<option value="">None - 2-way conversation</option>';
+        } else {
+            select.innerHTML = '';
+        }
 
         providers.forEach(provider => {
             if (!provider.configured) return;
@@ -467,6 +472,11 @@ function clearSelection() {
     messageCount = 0;
 }
 
+// Close settings panel without clearing conversation
+function closeSettingsPanel() {
+    document.getElementById('settings-panel').style.display = 'none';
+}
+
 function updateStats(messages) {
     messageCount = messages.length;
     totalTokens = messages.reduce((sum, m) => sum + (m.token_count || 0), 0);
@@ -513,10 +523,11 @@ function renderMessages(messages, starterMessage) {
     // Render conversation messages
     messages.forEach((msg, index) => {
         const div = document.createElement('div');
-        div.className = `message message-${msg.role.replace('_', '-')}`;
+        const isHumanInjected = msg.model_name === 'human';
+        div.className = `message message-${msg.role.replace('_', '-')} ${isHumanInjected ? 'message-human' : ''}`;
 
-        const modelName = msg.model_name.split('-').slice(0, 2).join(' ');
-        const tokens = msg.token_count ? `${msg.token_count} tok` : '';
+        const modelName = isHumanInjected ? 'Human' : msg.model_name.split('-').slice(0, 2).join(' ');
+        const tokens = msg.token_count ? `${msg.token_count} tok` : (isHumanInjected ? 'injected' : '');
 
         div.innerHTML = `
             <div class="message-header">
@@ -652,13 +663,21 @@ async function runConversation() {
 }
 
 // Create new conversation
+let isCreatingConversation = false;
+
 async function createConversation() {
+    // Prevent duplicate submissions
+    if (isCreatingConversation) return;
+
+    const modelC = document.getElementById('new-model-c').value;
     const data = {
         title: document.getElementById('new-title').value || 'unnamed_session',
         model_a: document.getElementById('new-model-a').value,
         model_b: document.getElementById('new-model-b').value,
+        model_c: modelC || null,
         system_prompt_a: document.getElementById('new-system-a').value || null,
         system_prompt_b: document.getElementById('new-system-b').value || null,
+        system_prompt_c: modelC ? (document.getElementById('new-system-c').value || null) : null,
         starter_message: document.getElementById('new-starter').value
     };
 
@@ -666,6 +685,8 @@ async function createConversation() {
         alert('// ERROR: Init prompt required');
         return;
     }
+
+    isCreatingConversation = true;
 
     try {
         const response = await fetch('/api/conversations/', {
@@ -683,10 +704,14 @@ async function createConversation() {
         document.getElementById('new-title').value = '';
         document.getElementById('new-system-a').value = '';
         document.getElementById('new-system-b').value = '';
+        document.getElementById('new-system-c').value = '';
+        document.getElementById('new-model-c').value = '';
         document.getElementById('new-starter').value = 'What is it like being you?';
     } catch (error) {
         console.error('Failed to create conversation:', error);
         alert('// ERROR: Session creation failed');
+    } finally {
+        isCreatingConversation = false;
     }
 }
 
@@ -720,8 +745,22 @@ async function deleteCurrentConversation() {
 }
 
 // Export conversation
+function openExportModal() {
+    if (!currentConversationId) {
+        alert('// ERROR: No conversation selected');
+        return;
+    }
+    document.getElementById('export-modal').classList.add('active');
+}
+
+function closeExportModal() {
+    document.getElementById('export-modal').classList.remove('active');
+}
+
 async function exportConversation() {
     if (!currentConversationId) return;
+
+    const format = document.getElementById('export-format').value;
 
     try {
         const [convResponse, messagesResponse] = await Promise.all([
@@ -738,26 +777,67 @@ async function exportConversation() {
         const conversation = await convResponse.json();
         const messages = await messagesResponse.json();
 
-        const exportData = {
-            meta: {
-                framework: 'Neural Discourse',
-                version: '0.1.0',
-                exported_at: new Date().toISOString()
-            },
-            session: conversation,
-            messages: messages || [],
-            stats: {
-                total_messages: (messages || []).length,
-                total_tokens: (messages || []).reduce((sum, m) => sum + (m.token_count || 0), 0)
-            }
-        };
+        let content, mimeType, extension;
 
-        const jsonString = JSON.stringify(exportData, null, 2);
-        const blob = new Blob([jsonString], { type: 'application/json;charset=utf-8' });
+        if (format === 'json') {
+            const exportData = {
+                meta: {
+                    framework: 'Neural Discourse',
+                    version: '0.1.0',
+                    exported_at: new Date().toISOString()
+                },
+                session: conversation,
+                messages: messages || [],
+                stats: {
+                    total_messages: (messages || []).length,
+                    total_tokens: (messages || []).reduce((sum, m) => sum + (m.token_count || 0), 0)
+                }
+            };
+            content = JSON.stringify(exportData, null, 2);
+            mimeType = 'application/json;charset=utf-8';
+            extension = 'json';
+        } else if (format === 'txt') {
+            content = `Neural Discourse - Conversation Export\n`;
+            content += `Title: ${conversation.title}\n`;
+            content += `Exported: ${new Date().toISOString()}\n`;
+            content += `${'='.repeat(60)}\n\n`;
+            content += `INIT: ${conversation.starter_message}\n\n`;
+            messages.forEach((msg, i) => {
+                content += `[${msg.role.toUpperCase()}] ${msg.model_name}\n`;
+                content += `${msg.content}\n\n`;
+            });
+            mimeType = 'text/plain;charset=utf-8';
+            extension = 'txt';
+        } else if (format === 'md') {
+            content = `# ${conversation.title}\n\n`;
+            content += `**Exported:** ${new Date().toISOString()}\n\n`;
+            content += `## Configuration\n\n`;
+            content += `- **Model A:** ${conversation.model_a}\n`;
+            content += `- **Model B:** ${conversation.model_b}\n\n`;
+            content += `## Conversation\n\n`;
+            content += `### INIT\n\n${conversation.starter_message}\n\n`;
+            messages.forEach((msg, i) => {
+                const role = msg.role === 'model_a' ? 'A' : 'B';
+                content += `### ${role} - ${msg.model_name}\n\n${msg.content}\n\n`;
+            });
+            mimeType = 'text/markdown;charset=utf-8';
+            extension = 'md';
+        } else if (format === 'csv') {
+            content = 'Index,Role,Model,Tokens,Content\n';
+            content += `0,INIT,human,0,"${conversation.starter_message.replace(/"/g, '""')}"\n`;
+            messages.forEach((msg, i) => {
+                const csvContent = msg.content.replace(/"/g, '""').replace(/\n/g, ' ');
+                content += `${i + 1},${msg.role},${msg.model_name},${msg.token_count || 0},"${csvContent}"\n`;
+            });
+            mimeType = 'text/csv;charset=utf-8';
+            extension = 'csv';
+        }
+
+        const blob = new Blob([content], { type: mimeType });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `neural-discourse_${conversation.id}_${Date.now()}.json`;
+        a.download = `neural-discourse_${conversation.id}_${Date.now()}.${extension}`;
         a.style.display = 'none';
         document.body.appendChild(a);
         a.click();
@@ -765,6 +845,8 @@ async function exportConversation() {
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
         }, 100);
+
+        closeExportModal();
     } catch (error) {
         console.error('Export failed:', error);
         alert('Export failed: ' + error.message);
@@ -858,6 +940,49 @@ function openSettingsModal() {
 
 function closeSettingsModal() {
     document.getElementById('settings-modal').classList.remove('active');
+}
+
+// Inject message modal
+function openInjectModal() {
+    if (!currentConversationId) {
+        alert('// ERROR: No conversation selected');
+        return;
+    }
+    document.getElementById('inject-modal').classList.add('active');
+}
+
+function closeInjectModal() {
+    document.getElementById('inject-modal').classList.remove('active');
+    document.getElementById('inject-content').value = '';
+}
+
+async function injectMessage() {
+    const content = document.getElementById('inject-content').value.trim();
+    const target = document.getElementById('inject-target').value;
+
+    if (!content) {
+        alert('// ERROR: Message content required');
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/conversations/${currentConversationId}/inject-message`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content, role: target })
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to inject message');
+        }
+
+        closeInjectModal();
+        await loadMessages(currentConversationId);
+        alert('// Message injected successfully');
+    } catch (error) {
+        console.error('Failed to inject message:', error);
+        alert('// ERROR: Failed to inject message');
+    }
 }
 
 async function updateKeyStatuses() {
@@ -963,6 +1088,20 @@ function clearApiKeys() {
 document.getElementById('settings-modal')?.addEventListener('click', (e) => {
     if (e.target.classList.contains('modal-overlay')) {
         closeSettingsModal();
+    }
+});
+
+// Inject modal close on overlay click
+document.getElementById('inject-modal')?.addEventListener('click', (e) => {
+    if (e.target.classList.contains('modal-overlay')) {
+        closeInjectModal();
+    }
+});
+
+// Export modal close on overlay click
+document.getElementById('export-modal')?.addEventListener('click', (e) => {
+    if (e.target.classList.contains('modal-overlay')) {
+        closeExportModal();
     }
 });
 

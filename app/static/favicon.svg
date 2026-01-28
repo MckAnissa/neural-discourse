@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <style>
+      .cube { fill: none; stroke: #00ffd5; stroke-width: 2; opacity: 0.8; }
+      .glitch { fill: none; stroke: #0099ff; stroke-width: 1.5; opacity: 0.6; }
+    </style>
+  </defs>
+  <!-- Main cube -->
+  <path class="cube" d="M 50 20 L 75 35 L 75 65 L 50 80 L 25 65 L 25 35 Z"/>
+  <path class="cube" d="M 50 20 L 50 50"/>
+  <path class="cube" d="M 75 35 L 50 50"/>
+  <path class="cube" d="M 25 35 L 50 50"/>
+
+  <!-- Glitch effect -->
+  <path class="glitch" d="M 48 18 L 73 33 L 73 63" style="transform: translate(2px, -1px);"/>
+  <path class="glitch" d="M 27 37 L 27 67 L 52 82" style="transform: translate(-2px, 1px);"/>
+
+  <!-- Inner hexagon -->
+  <path class="cube" d="M 50 35 L 60 40 L 60 55 L 50 60 L 40 55 L 40 40 Z" opacity="0.5"/>
+</svg>

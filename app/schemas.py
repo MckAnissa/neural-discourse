@@ -7,8 +7,10 @@ class ConversationCreate(BaseModel):
     title: str | None = Field(default="Untitled", max_length=255)
     model_a: str = Field(..., max_length=100)
     model_b: str = Field(..., max_length=100)
+    model_c: str | None = Field(default=None, max_length=100)
     system_prompt_a: str | None = Field(default=None, max_length=10000)
     system_prompt_b: str | None = Field(default=None, max_length=10000)
+    system_prompt_c: str | None = Field(default=None, max_length=10000)
     starter_message: str = Field(..., min_length=1, max_length=10000)
 
     @field_validator('title')
@@ -24,8 +26,10 @@ class ConversationResponse(BaseModel):
     title: str
     model_a: str
     model_b: str
+    model_c: str | None
     system_prompt_a: str | None
     system_prompt_b: str | None
+    system_prompt_c: str | None
     starter_message: str
     created_at: datetime
     updated_at: datetime
@@ -50,6 +54,11 @@ class MessageResponse(BaseModel):
 class RunConversationRequest(BaseModel):
     conversation_id: int = Field(..., gt=0)
     turns: int = Field(default=5, ge=1, le=50)  # 1-50 turns allowed
+
+
+class UserMessageInject(BaseModel):
+    content: str = Field(..., min_length=1, max_length=10000)
+    role: str = Field(..., pattern="^(user_to_a|user_to_b)$")  # Which model should see this as user input
 
 
 class ProviderStatus(BaseModel):

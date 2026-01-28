@@ -17,8 +17,26 @@ class GroqProvider(BaseProvider):
     def get_available_models(self) -> list[ModelInfo]:
         return [
             ModelInfo(
+                id="openai/gpt-oss-120b",
+                name="GPT-OSS 120B",
+                provider="groq",
+                description="Large open-source, less filtered",
+            ),
+            ModelInfo(
                 id="llama-3.3-70b-versatile",
                 name="Llama 3.3 70B",
+                provider="groq",
+                description="Open-source, less filtered",
+            ),
+            ModelInfo(
+                id="mistral-saba-24b",
+                name="Mistral Saba 24B",
+                provider="groq",
+                description="Multilingual, less filtered",
+            ),
+            ModelInfo(
+                id="openai/gpt-oss-20b",
+                name="GPT-OSS 20B",
                 provider="groq",
                 description="Open-source, less filtered",
             ),
@@ -27,18 +45,6 @@ class GroqProvider(BaseProvider):
                 name="Llama 3.1 8B",
                 provider="groq",
                 description="Fast, open-source, less filtered",
-            ),
-            ModelInfo(
-                id="mixtral-8x7b-32768",
-                name="Mixtral 8x7B",
-                provider="groq",
-                description="Open-source, 32K context",
-            ),
-            ModelInfo(
-                id="gemma2-9b-it",
-                name="Gemma 2 9B",
-                provider="groq",
-                description="Open-source, less filtered",
             ),
         ]
 

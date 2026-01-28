@@ -22,22 +22,28 @@ class XAIProvider(BaseProvider):
     def get_available_models(self) -> list[ModelInfo]:
         return [
             ModelInfo(
-                id="grok-3-beta",
-                name="Grok 3 Beta",
+                id="grok-4-1-fast",
+                name="Grok 4.1 Fast",
+                provider="xai",
+                description="Newest, fast reasoning, less filtered",
+            ),
+            ModelInfo(
+                id="grok-4",
+                name="Grok 4",
                 provider="xai",
                 description="Most capable, less filtered",
+            ),
+            ModelInfo(
+                id="grok-3",
+                name="Grok 3",
+                provider="xai",
+                description="Capable, less filtered",
             ),
             ModelInfo(
                 id="grok-2-1212",
                 name="Grok 2",
                 provider="xai",
-                description="Capable, less filtered",
-            ),
-            ModelInfo(
-                id="grok-beta",
-                name="Grok Beta",
-                provider="xai",
-                description="Fast, less filtered",
+                description="Stable, less filtered",
             ),
         ]
 
