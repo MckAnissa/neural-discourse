@@ -977,7 +977,7 @@ async function injectMessage() {
         }
 
         closeInjectModal();
-        await loadMessages(currentConversationId);
+        await selectConversation(currentConversationId);
         alert('// Message injected successfully');
     } catch (error) {
         console.error('Failed to inject message:', error);
