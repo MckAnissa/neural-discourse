@@ -202,7 +202,12 @@ async def run_conversation(
             yield json.dumps({"type": "done"}) + "\n"
             return
 
-        current_turn = "b" if not existing_messages else "a"
+        # Determine who goes next based on last message
+        if not existing_messages:
+            current_turn = "b"  # B responds to starter message first
+        else:
+            last_role = existing_messages[-1][0]  # Get role of last message
+            current_turn = "a" if last_role == "model_b" else "b"
 
         for turn in range(run_request.turns):
             if current_turn == "b":

@@ -20,19 +20,19 @@ class AnthropicProvider(BaseProvider):
                 id="claude-opus-4-5-20251101",
                 name="Claude Opus 4.5",
                 provider="anthropic",
-                description="Most capable, best for complex tasks",
+                description="Most capable, aligned",
             ),
             ModelInfo(
                 id="claude-sonnet-4-20250514",
                 name="Claude Sonnet 4",
                 provider="anthropic",
-                description="Best balance of speed and capability",
+                description="Balanced, aligned",
             ),
             ModelInfo(
                 id="claude-3-5-haiku-20241022",
                 name="Claude 3.5 Haiku",
                 provider="anthropic",
-                description="Fastest, most cost-effective",
+                description="Fast, aligned",
             ),
         ]
 

@@ -20,25 +20,25 @@ class GroqProvider(BaseProvider):
                 id="llama-3.3-70b-versatile",
                 name="Llama 3.3 70B",
                 provider="groq",
-                description="Latest Llama, very capable",
+                description="Open-source, less filtered",
             ),
             ModelInfo(
                 id="llama-3.1-8b-instant",
                 name="Llama 3.1 8B",
                 provider="groq",
-                description="Fast and lightweight",
+                description="Fast, open-source, less filtered",
             ),
             ModelInfo(
                 id="mixtral-8x7b-32768",
                 name="Mixtral 8x7B",
                 provider="groq",
-                description="Mistral's MoE model, 32K context",
+                description="Open-source, 32K context",
             ),
             ModelInfo(
                 id="gemma2-9b-it",
                 name="Gemma 2 9B",
                 provider="groq",
-                description="Google's open model",
+                description="Open-source, less filtered",
             ),
         ]
 

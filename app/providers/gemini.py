@@ -24,19 +24,19 @@ class GeminiProvider(BaseProvider):
                 id="gemini-2.0-flash",
                 name="Gemini 2.0 Flash",
                 provider="gemini",
-                description="Latest, fastest Gemini model",
+                description="Fastest, aligned",
             ),
             ModelInfo(
                 id="gemini-1.5-pro",
                 name="Gemini 1.5 Pro",
                 provider="gemini",
-                description="Most capable, 1M context",
+                description="1M context, aligned",
             ),
             ModelInfo(
                 id="gemini-1.5-flash",
                 name="Gemini 1.5 Flash",
                 provider="gemini",
-                description="Fast and efficient",
+                description="Fast, aligned",
             ),
         ]
 

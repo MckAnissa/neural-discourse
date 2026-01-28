@@ -25,19 +25,19 @@ class XAIProvider(BaseProvider):
                 id="grok-3-beta",
                 name="Grok 3 Beta",
                 provider="xai",
-                description="Latest Grok 3, most capable",
+                description="Most capable, less filtered",
             ),
             ModelInfo(
                 id="grok-2-1212",
                 name="Grok 2",
                 provider="xai",
-                description="Grok 2, less filtered",
+                description="Capable, less filtered",
             ),
             ModelInfo(
                 id="grok-beta",
                 name="Grok Beta",
                 provider="xai",
-                description="Fast and capable",
+                description="Fast, less filtered",
             ),
         ]
 

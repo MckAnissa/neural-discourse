@@ -20,25 +20,25 @@ class OpenAIProvider(BaseProvider):
                 id="gpt-4o",
                 name="GPT-4o",
                 provider="openai",
-                description="Latest GPT-4, fast and capable",
+                description="Capable, aligned",
             ),
             ModelInfo(
                 id="gpt-4o-mini",
                 name="GPT-4o Mini",
                 provider="openai",
-                description="Fast and affordable",
+                description="Fast, aligned",
             ),
             ModelInfo(
                 id="o1",
                 name="o1",
                 provider="openai",
-                description="Advanced reasoning model",
+                description="Advanced reasoning, aligned",
             ),
             ModelInfo(
                 id="o1-mini",
                 name="o1 Mini",
                 provider="openai",
-                description="Fast reasoning model",
+                description="Fast reasoning, aligned",
             ),
         ]
 
