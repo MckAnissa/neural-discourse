@@ -659,6 +659,16 @@ async function runConversation() {
         }
 
         messageCount = localMsgCount;
+
+        // Reload messages from database to ensure everything is in sync
+        const messagesResponse = await fetch(`/api/conversations/${currentConversationId}/messages`);
+        const messages = await messagesResponse.json();
+
+        const convResponse = await fetch(`/api/conversations/${currentConversationId}`);
+        const conversation = await convResponse.json();
+
+        updateStats(messages);
+        renderMessages(messages, conversation.starter_message);
     } catch (error) {
         console.error('Run failed:', error);
     } finally {
