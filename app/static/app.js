@@ -583,7 +583,7 @@ async function runConversation() {
         const decoder = new TextDecoder();
         const container = document.getElementById('messages-container');
 
-        let currentMessageDiv = null;
+        let messageDivsByRole = {}; // Track message divs by role
         let localMsgCount = messageCount;
 
         while (true) {
@@ -598,9 +598,9 @@ async function runConversation() {
 
                     if (event.type === 'start') {
                         localMsgCount++;
-                        currentMessageDiv = document.createElement('div');
-                        currentMessageDiv.className = `message message-${event.role.replace('_', '-')}`;
-                        currentMessageDiv.innerHTML = `
+                        const messageDiv = document.createElement('div');
+                        messageDiv.className = `message message-${event.role.replace('_', '-')}`;
+                        messageDiv.innerHTML = `
                             <div class="message-header">
                                 <span class="message-model">${createAvatarHTML()}${event.model.split('-').slice(0, 2).join(' ')}</span>
                                 <span class="message-tokens">#${String(localMsgCount).padStart(2, '0')}</span>
@@ -612,23 +612,29 @@ async function runConversation() {
                                 </div>
                             </div>
                         `;
-                        container.appendChild(currentMessageDiv);
+                        container.appendChild(messageDiv);
                         container.scrollTop = container.scrollHeight;
+
+                        // Track this message div by its role
+                        messageDivsByRole[event.role] = { div: messageDiv, count: localMsgCount };
                     }
 
-                    if (event.type === 'message' && currentMessageDiv) {
-                        const content = currentMessageDiv.querySelector('.message-content');
-                        const tokens = currentMessageDiv.querySelector('.message-tokens');
-                        content.textContent = event.content;
-                        tokens.textContent = `#${String(localMsgCount).padStart(2, '0')} ${event.tokens || 0} tok`;
-                        container.scrollTop = container.scrollHeight;
+                    if (event.type === 'message') {
+                        const messageData = messageDivsByRole[event.role];
+                        if (messageData) {
+                            const content = messageData.div.querySelector('.message-content');
+                            const tokens = messageData.div.querySelector('.message-tokens');
+                            content.textContent = event.content;
+                            tokens.textContent = `#${String(messageData.count).padStart(2, '0')} ${event.tokens || 0} tok`;
+                            container.scrollTop = container.scrollHeight;
 
-                        // Update stats
-                        totalTokens += event.tokens || 0;
-                        const tokEl = document.getElementById('stat-tokens');
-                        const msgEl = document.getElementById('stat-messages');
-                        if (tokEl) tokEl.textContent = totalTokens.toLocaleString();
-                        if (msgEl) msgEl.textContent = localMsgCount;
+                            // Update stats
+                            totalTokens += event.tokens || 0;
+                            const tokEl = document.getElementById('stat-tokens');
+                            const msgEl = document.getElementById('stat-messages');
+                            if (tokEl) tokEl.textContent = totalTokens.toLocaleString();
+                            if (msgEl) msgEl.textContent = localMsgCount;
+                        }
                     }
 
                     if (event.type === 'error') {

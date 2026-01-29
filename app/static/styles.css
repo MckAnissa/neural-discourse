@@ -1234,7 +1234,20 @@ body {
     }
 
     .settings-panel {
-        display: none;
+        display: none !important;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1001;
+        background: var(--bg-secondary);
+        overflow-y: auto;
+    }
+
+    .settings-panel[style*="display: block"],
+    .settings-panel[style*="display:block"] {
+        display: block !important;
     }
 
     .sidebar {
@@ -1270,16 +1283,38 @@ body {
 
     .chat-container {
         margin: 0;
+        padding-top: 2.2rem;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .chat-header {
+        flex-shrink: 0;
+    }
+
+    .messages-container {
+        padding: 0.5rem;
+        flex: 1;
+        overflow-y: auto;
+        min-height: 200px;
+    }
+
+    .controls-panel {
+        flex-shrink: 0;
+    }
+
+    .message {
+        max-width: 98%;
     }
 }
 
 /* Mobile Config Bar */
 .mobile-config {
     display: none;
-    padding: 0.25rem 0.5rem;
+    padding: 0.35rem 0.5rem;
     background: var(--bg-secondary);
     border-bottom: 1px solid var(--border-color);
-    gap: 0.3rem;
+    gap: 0.4rem;
     justify-content: center;
     align-items: center;
     min-height: 0;
@@ -1290,16 +1325,25 @@ body {
 @media (max-width: 900px) {
     .mobile-config {
         display: flex;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
+    }
+
+    .chat-container {
+        margin-top: 0;
     }
 }
 
 .mobile-btn {
-    padding: 0.2rem 0.4rem;
+    padding: 0.5rem 0.85rem;
     background: var(--bg-tertiary);
     border: 1px solid var(--cyan-dim);
     color: var(--cyan-primary);
     font-family: var(--font-mono);
-    font-size: 0.5rem;
+    font-size: 0.7rem;
     line-height: 1;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -1648,8 +1692,8 @@ body {
     }
 
     .tab-btn {
-        font-size: 0.6rem;
-        padding: 0.4rem 0.75rem;
+        font-size: 0.7rem;
+        padding: 0.5rem 0.85rem;
         white-space: nowrap;
         flex-shrink: 0;
     }
@@ -1772,8 +1816,12 @@ body {
     }
 
     /* Messages fit better */
+    .messages-container {
+        padding: 0.75rem;
+    }
+
     .message {
-        max-width: 90%;
+        max-width: 95%;
         padding: 0.75rem 1rem;
         font-size: 0.8rem;
     }
