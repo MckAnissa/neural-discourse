@@ -270,14 +270,30 @@ async def run_conversation(
                 messages = messages_a
                 role = "model_a"
 
-            # Add context note for first turn
+            # Add context note
             enhanced_system = system
-            if turn == 0 and not existing_messages:
-                context_note = "Note: The first message in this conversation was written by a human to seed the discussion. All subsequent messages are from AI models engaging in discourse."
+
+            # For 3-way conversations, always add structure context
+            if is_three_way:
+                if role == "model_a":
+                    context_note = f"You are Model A in a 3-way AI conversation. Model B ({model_b}) and Model C ({model_c}) are also participants. Messages from both other models appear as 'user' inputs. Respond in turn (A → B → C → A)."
+                elif role == "model_b":
+                    context_note = f"You are Model B in a 3-way AI conversation. Model A ({model_a}) and Model C ({model_c}) are also participants. Messages from both other models appear as 'user' inputs. Respond in turn (A → B → C → A)."
+                else:
+                    context_note = f"You are Model C in a 3-way AI conversation. Model A ({model_a}) and Model B ({model_b}) are also participants. Messages from both other models appear as 'user' inputs. Respond in turn (A → B → C → A)."
+
                 if enhanced_system:
                     enhanced_system = f"{context_note}\n\n{enhanced_system}"
                 else:
                     enhanced_system = context_note
+
+            # For first turn only, add note about human-seeded message
+            if turn == 0 and not existing_messages:
+                seed_note = "Note: The first message in this conversation was written by a human to seed the discussion."
+                if enhanced_system:
+                    enhanced_system = f"{enhanced_system}\n\n{seed_note}"
+                else:
+                    enhanced_system = seed_note
 
             yield json.dumps({"type": "start", "role": role, "model": current_model}) + "\n"
 
