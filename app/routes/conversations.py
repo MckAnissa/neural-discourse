@@ -163,8 +163,10 @@ async def run_conversation(
     conv_id = conversation.id
     model_a = conversation.model_a
     model_b = conversation.model_b
+    model_c = conversation.model_c
     system_prompt_a = conversation.system_prompt_a
     system_prompt_b = conversation.system_prompt_b
+    system_prompt_c = conversation.system_prompt_c
     starter_message = conversation.starter_message
     existing_messages = [(msg.role, msg.content) for msg in conversation.messages]
 
@@ -175,19 +177,33 @@ async def run_conversation(
         # Get existing messages or start fresh
         messages_a = []  # Messages from model A's perspective
         messages_b = []  # Messages from model B's perspective
+        messages_c = []  # Messages from model C's perspective (if 3-way)
+
+        # Check if this is a 3-way conversation
+        is_three_way = model_c is not None
 
         # Load existing messages from copied data
         for msg_role, msg_content in existing_messages:
             if msg_role == "model_a":
                 messages_a.append(ChatMessage(role="assistant", content=msg_content))
                 messages_b.append(ChatMessage(role="user", content=msg_content))
-            else:
+                if is_three_way:
+                    messages_c.append(ChatMessage(role="user", content=msg_content))
+            elif msg_role == "model_b":
                 messages_a.append(ChatMessage(role="user", content=msg_content))
                 messages_b.append(ChatMessage(role="assistant", content=msg_content))
+                if is_three_way:
+                    messages_c.append(ChatMessage(role="user", content=msg_content))
+            elif msg_role == "model_c":
+                messages_a.append(ChatMessage(role="user", content=msg_content))
+                messages_b.append(ChatMessage(role="user", content=msg_content))
+                messages_c.append(ChatMessage(role="assistant", content=msg_content))
 
         # If no messages yet, seed with starter
         if not messages_a:
             messages_b.append(ChatMessage(role="user", content=starter_message))
+            if is_three_way:
+                messages_c.append(ChatMessage(role="user", content=starter_message))
 
         # Get providers with user-provided keys
         try:
@@ -204,12 +220,32 @@ async def run_conversation(
             yield json.dumps({"type": "done"}) + "\n"
             return
 
+        # Get provider C if 3-way conversation
+        provider_c = None
+        if is_three_way:
+            try:
+                provider_c = get_provider(model_c, anthropic_key, groq_key, openai_key, xai_key, kimi_key, gemini_key)
+            except ValueError as e:
+                yield json.dumps({"type": "error", "error": f"Model C error: {str(e)}"}) + "\n"
+                yield json.dumps({"type": "done"}) + "\n"
+                return
+
         # Determine who goes next based on last message
         if not existing_messages:
             current_turn = "b"  # B responds to starter message first
         else:
             last_role = existing_messages[-1][0]  # Get role of last message
-            current_turn = "a" if last_role == "model_b" else "b"
+            if is_three_way:
+                # 3-way rotation: a → b → c → a
+                if last_role == "model_a":
+                    current_turn = "b"
+                elif last_role == "model_b":
+                    current_turn = "c"
+                else:
+                    current_turn = "a"
+            else:
+                # 2-way rotation: a ↔ b
+                current_turn = "a" if last_role == "model_b" else "b"
 
         for turn in range(run_request.turns):
             if current_turn == "b":
@@ -219,6 +255,13 @@ async def run_conversation(
                 system = system_prompt_b
                 messages = messages_b
                 role = "model_b"
+            elif current_turn == "c":
+                # Model C responds
+                provider = provider_c
+                current_model = model_c
+                system = system_prompt_c
+                messages = messages_c
+                role = "model_c"
             else:
                 # Model A responds
                 provider = provider_a
@@ -260,9 +303,17 @@ async def run_conversation(
                 if role == "model_a":
                     messages_a.append(ChatMessage(role="assistant", content=content))
                     messages_b.append(ChatMessage(role="user", content=content))
-                else:
+                    if is_three_way:
+                        messages_c.append(ChatMessage(role="user", content=content))
+                elif role == "model_b":
                     messages_b.append(ChatMessage(role="assistant", content=content))
                     messages_a.append(ChatMessage(role="user", content=content))
+                    if is_three_way:
+                        messages_c.append(ChatMessage(role="user", content=content))
+                elif role == "model_c":
+                    messages_c.append(ChatMessage(role="assistant", content=content))
+                    messages_a.append(ChatMessage(role="user", content=content))
+                    messages_b.append(ChatMessage(role="user", content=content))
 
                 yield json.dumps({
                     "type": "message",
@@ -276,7 +327,18 @@ async def run_conversation(
                 yield json.dumps({"type": "error", "error": str(e)}) + "\n"
                 break
 
-            current_turn = "a" if current_turn == "b" else "b"
+            # Rotate to next turn
+            if is_three_way:
+                # 3-way rotation: a → b → c → a
+                if current_turn == "a":
+                    current_turn = "b"
+                elif current_turn == "b":
+                    current_turn = "c"
+                else:
+                    current_turn = "a"
+            else:
+                # 2-way rotation: a ↔ b
+                current_turn = "a" if current_turn == "b" else "b"
             await asyncio.sleep(0.5)  # Small delay between turns
 
         yield json.dumps({"type": "done"}) + "\n"

@@ -20,17 +20,23 @@ class GroqProvider(BaseProvider):
                 id="openai/gpt-oss-120b",
                 name="GPT-OSS 120B",
                 provider="groq",
-                description="Large open-source, less filtered",
+                description="Large reasoning model, less filtered",
+            ),
+            ModelInfo(
+                id="meta-llama/llama-4-scout",
+                name="Llama 4 Scout",
+                provider="groq",
+                description="Newest Llama, less filtered",
             ),
             ModelInfo(
                 id="llama-3.3-70b-versatile",
                 name="Llama 3.3 70B",
                 provider="groq",
-                description="Open-source, less filtered",
+                description="Versatile, less filtered",
             ),
             ModelInfo(
-                id="mistral-saba-24b",
-                name="Mistral Saba 24B",
+                id="qwen-3-32b",
+                name="Qwen 3 32B",
                 provider="groq",
                 description="Multilingual, less filtered",
             ),
@@ -38,13 +44,7 @@ class GroqProvider(BaseProvider):
                 id="openai/gpt-oss-20b",
                 name="GPT-OSS 20B",
                 provider="groq",
-                description="Open-source, less filtered",
-            ),
-            ModelInfo(
-                id="llama-3.1-8b-instant",
-                name="Llama 3.1 8B",
-                provider="groq",
-                description="Fast, open-source, less filtered",
+                description="Compact reasoning, less filtered",
             ),
         ]
 
