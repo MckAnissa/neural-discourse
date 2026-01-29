@@ -83,8 +83,10 @@ async def create_conversation(
         title=data.title,
         model_a=data.model_a,
         model_b=data.model_b,
+        model_c=data.model_c,
         system_prompt_a=data.system_prompt_a,
         system_prompt_b=data.system_prompt_b,
+        system_prompt_c=data.system_prompt_c,
         starter_message=data.starter_message,
     )
     db.add(conversation)
