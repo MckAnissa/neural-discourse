@@ -28,6 +28,10 @@
                           0 0 30px rgba(0, 255, 213, 0.5),
                           0 0 60px rgba(0, 255, 213, 0.3);
 
+    --orange-primary: #ff8800;
+    --orange-dim: #cc6d00;
+    --orange-glow: rgba(255, 136, 0, 0.4);
+
     --text-primary: #e0e0e0;
     --text-secondary: #888;
     --text-dim: #444;
@@ -744,12 +748,23 @@ body {
     box-shadow: inset 0 0 5px rgba(0, 208, 255, 0.3);
 }
 
+/* Model C avatar - orange */
+.message-model-c .ai-avatar .cube-face {
+    border-color: var(--orange-primary);
+    background: rgba(255, 136, 0, 0.15);
+    box-shadow: inset 0 0 5px rgba(255, 136, 0, 0.3);
+}
+
 .message-model-a .message-model {
     color: var(--purple-primary);
 }
 
 .message-model-b .message-model {
     color: var(--cyan-primary);
+}
+
+.message-model-c .message-model {
+    color: var(--orange-primary);
 }
 
 .message-tokens {
