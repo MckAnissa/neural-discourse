@@ -21,10 +21,16 @@ class GeminiProvider(BaseProvider):
     def get_available_models(self) -> list[ModelInfo]:
         return [
             ModelInfo(
-                id="gemini-2.0-flash",
-                name="Gemini 2.0 Flash",
+                id="gemini-2.5-flash",
+                name="Gemini 2.5 Flash",
                 provider="gemini",
                 description="Fastest, aligned",
+            ),
+            ModelInfo(
+                id="gemini-2.5-pro",
+                name="Gemini 2.5 Pro",
+                provider="gemini",
+                description="Most capable, aligned",
             ),
             ModelInfo(
                 id="gemini-1.5-pro",
